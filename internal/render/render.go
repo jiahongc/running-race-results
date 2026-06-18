@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/jiahongchen/race-results/internal/domain"
@@ -46,4 +47,49 @@ func JSON(w io.Writer, r domain.Result) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(r)
+}
+
+// Column is one column of a List rendering.
+type Column struct {
+	Header string
+	Value  func(domain.Result) string
+}
+
+// List writes rows as a header + aligned columns.
+func List(w io.Writer, rows []domain.Result, cols []Column) error {
+	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
+	headers := make([]string, len(cols))
+	for i, c := range cols {
+		headers[i] = c.Header
+	}
+	fmt.Fprintln(tw, strings.Join(headers, "\t"))
+	for _, r := range rows {
+		cells := make([]string, len(cols))
+		for i, c := range cols {
+			cells[i] = c.Value(r)
+		}
+		fmt.Fprintln(tw, strings.Join(cells, "\t"))
+	}
+	return tw.Flush()
+}
+
+// Athletes writes an athlete disambiguation table.
+func Athletes(w io.Writer, as []domain.Athlete) error {
+	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
+	fmt.Fprintln(tw, "Name\tCity\tAge\tRacerID")
+	for _, a := range as {
+		loc := a.City
+		if a.StateProv != "" {
+			loc = a.City + ", " + a.StateProv
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\n", a.Name, loc, a.Age, a.ID)
+	}
+	return tw.Flush()
+}
+
+// JSONValue writes any value as indented JSON.
+func JSONValue(w io.Writer, v any) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
 }

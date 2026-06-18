@@ -63,6 +63,46 @@ func TestTableOmitsZeroPlaces(t *testing.T) {
 	}
 }
 
+func TestListAndAthletes(t *testing.T) {
+	rows := []domain.Result{
+		{RaceName: "Berlin", Date: "2024-09-29", NetTime: "02:45:10", OverallPlace: 512},
+		{RaceName: "Boston", Date: "2025-04-21", NetTime: "02:50:00", OverallPlace: 700},
+	}
+	cols := []Column{
+		{"Date", func(r domain.Result) string { return r.Date }},
+		{"Race", func(r domain.Result) string { return r.RaceName }},
+		{"Net time", func(r domain.Result) string { return r.NetTime }},
+	}
+	var b bytes.Buffer
+	if err := List(&b, rows, cols); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	for _, want := range []string{"Date", "Berlin", "Boston", "02:45:10"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("list missing %q:\n%s", want, out)
+		}
+	}
+
+	var b2 bytes.Buffer
+	if err := Athletes(&b2, []domain.Athlete{{Name: "Jim Smith", City: "amadora", Age: 41, ID: "338681853"}}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b2.String(), "Jim Smith") || !strings.Contains(b2.String(), "338681853") {
+		t.Fatalf("athletes missing fields:\n%s", b2.String())
+	}
+}
+
+func TestJSONValueArray(t *testing.T) {
+	var b bytes.Buffer
+	if err := JSONValue(&b, []domain.Result{{Runner: "A"}}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), `"Runner": "A"`) || b.String()[0] != '[' {
+		t.Fatalf("expected JSON array:\n%s", b.String())
+	}
+}
+
 func TestTableOmitsZeroYear(t *testing.T) {
 	r := domain.Result{Provider: "x", RaceName: "Some Race", Runner: "A B", Bib: "9"}
 	var b bytes.Buffer
