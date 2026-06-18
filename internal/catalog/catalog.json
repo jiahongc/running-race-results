@@ -1,0 +1,4 @@
+[
+  { "race": "BMW Berlin Marathon", "aliases": ["berlin", "berlin marathon"], "provider": "mika", "event_id": "BERLIN", "year": 2025, "base_url": "https://berlin.r.mikatiming.com" },
+  { "race": "TCS New York City Marathon", "aliases": ["nyc marathon", "new york city marathon", "nyc"], "provider": "nyrr", "event_id": "", "year": 2024, "base_url": "https://rmsprodapi.nyrr.org" }
+]
