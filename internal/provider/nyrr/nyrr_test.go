@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jiahongchen/race-results/internal/domain"
@@ -76,5 +77,29 @@ func TestLookup_Miss(t *testing.T) {
 	_, err := c.Lookup(context.Background(), testEvent, "999999")
 	if !errors.Is(err, provider.ErrBibNotFound) {
 		t.Errorf("expected ErrBibNotFound, got: %v", err)
+	}
+}
+
+func TestSearchByName(t *testing.T) {
+	srv := newTestServer(t)
+	defer srv.Close()
+
+	c := New()
+	c.BaseURL = srv.URL
+
+	got, err := c.SearchByName(context.Background(), testEvent, "Smith")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("expected at least one result for 'Smith'")
+	}
+	for _, r := range got {
+		if !strings.Contains(strings.ToLower(r.Runner), "smith") {
+			t.Errorf("result Runner %q does not contain 'smith'", r.Runner)
+		}
+		if r.Bib == "" {
+			t.Errorf("result has empty Bib: %+v", r)
+		}
 	}
 }

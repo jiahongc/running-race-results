@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jiahongchen/race-results/internal/domain"
@@ -66,11 +67,12 @@ type item struct {
 	RacesCount      int     `json:"racesCount"`
 }
 
-// Lookup implements provider.Provider.
-func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domain.Result, error) {
+// fetch calls the finishers-filter endpoint with the given searchString and
+// returns all returned items.
+func (c *Client) fetch(ctx context.Context, ev domain.Event, searchString string) ([]item, error) {
 	reqBody := searchRequest{
 		EventCode:      ev.ID,
-		SearchString:   bib,
+		SearchString:   searchString,
 		PageIndex:      1,
 		PageSize:       50,
 		SortColumn:     "overallTime",
@@ -79,47 +81,80 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
-		return domain.Result{}, fmt.Errorf("nyrr: marshal request: %w", err)
+		return nil, fmt.Errorf("nyrr: marshal request: %w", err)
 	}
 
 	url := c.BaseURL + "/api/v2/runners/finishers-filter"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return domain.Result{}, fmt.Errorf("nyrr: create request: %w", err)
+		return nil, fmt.Errorf("nyrr: create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return domain.Result{}, fmt.Errorf("nyrr: http request: %w", err)
+		return nil, fmt.Errorf("nyrr: http request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return domain.Result{}, fmt.Errorf("nyrr: unexpected status %d", resp.StatusCode)
+		return nil, fmt.Errorf("nyrr: unexpected status %d", resp.StatusCode)
 	}
 
 	var sr searchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
-		return domain.Result{}, fmt.Errorf("nyrr: decode response: %w", err)
+		return nil, fmt.Errorf("nyrr: decode response: %w", err)
+	}
+	return sr.Items, nil
+}
+
+// mapItem converts an item to a domain.Result.
+func (c *Client) mapItem(ev domain.Event, it item) domain.Result {
+	return domain.Result{
+		Provider:     "nyrr",
+		RaceName:     ev.Name,
+		Year:         ev.Year,
+		Runner:       it.FirstName + " " + it.LastName,
+		Bib:          it.Bib,
+		NetTime:      it.OverallTime,
+		OverallPlace: it.OverallPlace,
+		GenderPlace:  it.GenderPlace,
+		SourceURL:    "https://results.nyrr.org/races/" + ev.ID + "/results",
+	}
+}
+
+// Lookup implements provider.Provider.
+func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domain.Result, error) {
+	items, err := c.fetch(ctx, ev, bib)
+	if err != nil {
+		return domain.Result{}, err
 	}
 
-	for _, it := range sr.Items {
+	for _, it := range items {
 		if it.Bib != bib {
 			continue
 		}
-		return domain.Result{
-			Provider:     "nyrr",
-			RaceName:     ev.Name,
-			Year:         ev.Year,
-			Runner:       it.FirstName + " " + it.LastName,
-			Bib:          it.Bib,
-			NetTime:      it.OverallTime,
-			OverallPlace: it.OverallPlace,
-			GenderPlace:  it.GenderPlace,
-			SourceURL:    "https://results.nyrr.org/races/" + ev.ID + "/results",
-		}, nil
+		return c.mapItem(ev, it), nil
 	}
 
 	return domain.Result{}, provider.ErrBibNotFound
+}
+
+// SearchByName implements provider.NameSearcher. It posts the finishers-filter
+// endpoint with the name as the search string and returns all items whose full
+// name contains the query (case-insensitive substring match).
+func (c *Client) SearchByName(ctx context.Context, ev domain.Event, name string) ([]domain.Result, error) {
+	items, err := c.fetch(ctx, ev, name)
+	if err != nil {
+		return nil, err
+	}
+	var out []domain.Result
+	q := strings.ToLower(name)
+	for _, it := range items {
+		full := strings.ToLower(it.FirstName + " " + it.LastName)
+		if strings.Contains(full, q) {
+			out = append(out, c.mapItem(ev, it))
+		}
+	}
+	return out, nil
 }
