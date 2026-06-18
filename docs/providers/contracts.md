@@ -359,3 +359,91 @@ chipTimeInMillis / 1000  →  net seconds
 gunTimeInMillis / 1000   →  gun seconds
 ```
 Format for display: `seconds → H:MM:SS` (standard Go `time.Duration` formatting).
+
+### Athlete (cross-event)
+
+These two endpoints are served by `alaska.athlinks.com` (the legacy GraphQL-style API), not `reignite-api.athlinks.com`. Auth is the same Keycloak bearer token.
+
+**1. Athlete search by name:**
+```
+GET https://alaska.athlinks.com/athletes/api/find?searchTerm={name}&limit={n}&skip={offset}
+    &running=true&upTo5k=true&from5kTo15k=true&from15kToHalfMara=true
+    &fromHalfMaraToMara=true&marathon=true&ultra=true&triathlon=true
+    &sprint=true&olympic=true&halfIronman=true&ironmanAndUp=true
+    &aquathlon=true&aquabike=true&duathlon=true&more=true
+    &swim=true&mountainBike=true&cycling=true&snow=true
+    &adventure=true&obstacle=true&other=true
+    &gender=&fromAge=5&toAge=90&location=&withinRange=&sortBy=
+Authorization: Bearer <token>
+Origin: https://www.athlinks.com
+```
+- `searchTerm`: free-text name search (prefix match); `limit`/`skip` for pagination
+- The sport/category boolean flags can all be `true` for an unrestricted search
+- Returns `result.athletes[]` — each entry is an athlete (person) record, not a race entry
+- `result.total`: total count across all pages
+
+**racerId** is obtained from `result.athletes[i].racerId`. Athletes with `showPersonalData: false` have a null `profileUrl` — still searchable but profile page is private.
+
+Fixture: `testdata/fixtures/athlinks/athlete-search.json`
+- Captured: `searchTerm=Smith`, `limit=10`, `skip=0`
+- `result.total`: 15074 | `result.athletes` has 10 items
+
+Response → fields per athlete:
+- `racerId` → stable athlete ID (use in profile URL and Races endpoint)
+- `displayName` → full name
+- `gender` ("M"/"F") → gender
+- `age` → age
+- `city`, `stateProv`, `country` → location
+- `totalRaces` → count of claimed results across all events
+- `profileUrl` → relative path e.g. `/athletes/{racerId}` (null if profile is private)
+- `raceCategs` → array of sport category IDs the athlete has raced in
+- `showPersonalData` → bool; if false, profile is private
+
+**2. Athlete race history:**
+```
+GET https://alaska.athlinks.com/athletes/api/{racerId}/Races?start={offset}&limit={n}
+Authorization: Bearer <token>
+Origin: https://www.athlinks.com
+```
+- `racerId`: from athlete search above
+- `start`/`limit`: pagination params (note: as of capture the API ignores limit and returns all entries — treat as a no-pagination endpoint for now)
+- Returns all claimed race entries for the athlete, sorted newest-first
+
+Fixture: `testdata/fixtures/athlinks/athlete-results.json`
+- Captured: `racerId=43234281` (Meisha Smith-Bystrom, public profile, 118 races)
+- Truncated to 3 entries; `Result.raceEntries.MasterCount` = 118
+
+Response structure:
+```
+Result.raceEntries.MasterCount   — total number of race entries
+Result.raceEntries.List[]        — array of race entry objects
+```
+
+Per-entry field mapping:
+- `Race.RaceName` → event name (e.g. "Mohican 100 Trail Run")
+- `Race.RaceDate` → ISO-8601 date (e.g. `"2023-06-03T04:00:00"`)
+- `Race.MasterEventID` → masterEventId for the Athlinks event page URL
+- `Race.Courses[0].CourseName` → sub-course/distance name (e.g. "Marathon", "5K")
+- `Race.Courses[0].DistUnit` → distance in meters (e.g. `42164.81` = marathon)
+- `Race.Courses[0].EventCourseID` → eventCourseId (= raceId for deep-link)
+- `Race.City`, `Race.StateProvAbbrev`, `Race.CountryID` → event location
+- `EventID` → reignite-api or alaska eventId
+- `EventCourseID` → (string) raceId for deep-link to `reignite-api.athlinks.com/event/{eventId}/race/{raceId}/bib/{bib}/result`
+- `BibNum` → bib number (string, may be empty for virtual events)
+- `TicksString` → finish time formatted (e.g. `"4:28:11"`, `"24:57"`)
+- `Ticks` → finish time in milliseconds (divide by 1000 for seconds)
+- `RankO` / `CountO` → overall place / total finishers overall
+- `RankG` / `CountG` → gender place / total finishers in gender
+- `RankA` / `CountA` → age-group place / total finishers in age group
+- `ClassName` → age group name (e.g. `"50 to 54"`)
+- `ClaimStatus` → `"Claimed"` = athlete has claimed this result
+- `RacerID` → same as `racerId` from search
+
+**Deep-link to full result detail** (from race history entry):
+```
+https://www.athlinks.com/event/{Race.MasterEventID}/results/Event/{EventID}/Course/{EventCourseID}/Bib/{BibNum}
+```
+
+**`--me` shortcut:** The Keycloak JWT payload contains `"athlinks-racer-id": <int>` — decode the token's middle segment (base64url) to obtain the authenticated user's own `racerId` without an extra API call. This enables `athlinks athlete --me` that skips the search step entirely.
+
+**Pagination note:** The `/Races` endpoint currently returns all entries regardless of `start`/`limit`. The `start=0&limit=N` params are accepted but may be ignored server-side. For large profiles (hundreds of races), expect a single large response.
