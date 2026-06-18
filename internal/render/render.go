@@ -18,7 +18,11 @@ func Table(w io.Writer, r domain.Result) error {
 			fmt.Fprintf(tw, "%s\t%s\n", label, val)
 		}
 	}
-	row("Race", fmt.Sprintf("%s %d", r.RaceName, r.Year))
+	if r.Year > 0 {
+		row("Race", fmt.Sprintf("%s %d", r.RaceName, r.Year))
+	} else {
+		row("Race", r.RaceName)
+	}
 	row("Runner", r.Runner)
 	row("Bib", r.Bib)
 	row("Net time", r.NetTime)

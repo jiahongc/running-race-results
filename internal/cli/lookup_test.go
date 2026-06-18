@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jiahongchen/race-results/internal/catalog"
 	"github.com/jiahongchen/race-results/internal/domain"
 	"github.com/jiahongchen/race-results/internal/provider"
 )
@@ -50,15 +51,23 @@ func TestLookupUnknownRaceErrors(t *testing.T) {
 func TestLookupDeriveYearFromDate(t *testing.T) {
 	reg := provider.NewRegistry()
 	reg.Register(stubProvider{})
-	root := NewRoot(reg)
+	entries := []catalog.Entry{
+		{Race: "BMW Berlin Marathon", Aliases: []string{"berlin"}, Provider: "mika", EventID: "B2024", Year: 2024},
+		{Race: "BMW Berlin Marathon", Aliases: []string{"berlin"}, Provider: "mika", EventID: "B2025", Year: 2025},
+	}
+	cmd := newLookupCmd(reg, entries)
 	var out bytes.Buffer
-	root.SetOut(&out)
-	root.SetErr(&out)
-	root.SetArgs([]string{"lookup", "berlin", "1234", "--date", "2025-09-28"})
-	if err := root.Execute(); err != nil {
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"berlin", "1234", "--date", "2025-09-28"})
+	if err := cmd.Execute(); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
-	if !strings.Contains(out.String(), "2025") {
-		t.Fatalf("expected 2025 edition resolved:\n%s", out.String())
+	got := out.String()
+	if strings.Contains(got, "Multiple matches") {
+		t.Fatalf("date did not disambiguate edition; got ambiguity:\n%s", got)
+	}
+	if !strings.Contains(got, "BMW Berlin Marathon 2025") {
+		t.Fatalf("expected 2025 edition resolved, got:\n%s", got)
 	}
 }

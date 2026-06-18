@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newLookupCmd(reg *provider.Registry) *cobra.Command {
+func newLookupCmd(reg *provider.Registry, entries []catalog.Entry) *cobra.Command {
 	var year int
 	var date string
 	var asJSON bool
@@ -32,10 +32,6 @@ func newLookupCmd(reg *provider.Registry) *cobra.Command {
 				year = t.Year()
 			}
 
-			entries, err := catalog.Load()
-			if err != nil {
-				return err
-			}
 			cands, err := resolve.Resolve(entries, race, year)
 			if err != nil {
 				return fmt.Errorf("%w: %q", err, race)

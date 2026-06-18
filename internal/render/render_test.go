@@ -36,3 +36,17 @@ func TestJSONRoundTrips(t *testing.T) {
 		t.Fatalf("json missing runner:\n%s", b.String())
 	}
 }
+
+func TestTableOmitsZeroYear(t *testing.T) {
+	r := domain.Result{Provider: "x", RaceName: "Some Race", Runner: "A B", Bib: "9"}
+	var b bytes.Buffer
+	if err := Table(&b, r); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(b.String(), "Some Race 0") {
+		t.Fatalf("table faked a zero year:\n%s", b.String())
+	}
+	if !strings.Contains(b.String(), "Some Race") {
+		t.Fatalf("table missing race name:\n%s", b.String())
+	}
+}
