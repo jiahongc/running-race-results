@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "url": "https://results.raceroster.com/v2/api/events/4p3khwy5ujzf2v33/participant-search?phrase=Smith",
+    "event": "2024 TCS Toronto Waterfront Marathon (virtual sub-events)",
+    "eventUniqueCode": "4p3khwy5ujzf2v33",
+    "capturedAt": "2026-06-18"
+  },
+  "data": {
+    "exact": [],
+    "other": [
+      {
+        "teamName": "Celiac Canada",
+        "resultSubEventId": "213657",
+        "firstName": "Nancy",
+        "lastName": "Stonos-Smith",
+        "gender": "Female",
+        "name": "Nancy Stonos-Smith",
+        "bib": "",
+        "age": 35,
+        "_score": 1550.0497,
+        "id": "xf6gytfz69fm6mj6",
+        "matched_queries": [
+          "multi-field-fuzzy-participant",
+          "wild-wildcard-first-last-name"
+        ]
+      }
+    ]
+  }
+}
