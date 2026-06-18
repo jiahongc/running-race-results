@@ -86,7 +86,6 @@ func (c *Client) AthleteHistory(ctx context.Context, racerID string) ([]domain.R
 					RankG       int    `json:"RankG"`
 					RankA       int    `json:"RankA"`
 					TicksString string `json:"TicksString"`
-					EventID     int    `json:"EventID"`
 					Race        struct {
 						RaceName string `json:"RaceName"`
 						RaceDate string `json:"RaceDate"`

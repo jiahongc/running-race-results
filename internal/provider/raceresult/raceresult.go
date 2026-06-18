@@ -320,9 +320,25 @@ func (c *Client) SearchByName(ctx context.Context, ev domain.Event, name string)
 	}
 
 	var out []domain.Result
+	seen := make(map[string]bool)
+	anyOK := false
 	for _, l := range cfg.Tab.Config.Lists {
-		rows, _ := c.nameRows(ctx, dataBase, ev, cfg.Key, l.Name, contestID, name)
-		out = append(out, rows...)
+		rows, ok := c.nameRows(ctx, dataBase, ev, cfg.Key, l.Name, contestID, name)
+		if ok {
+			anyOK = true
+		}
+		for _, r := range rows {
+			if r.Bib != "" {
+				if seen[r.Bib] {
+					continue // same runner appears in multiple lists
+				}
+				seen[r.Bib] = true
+			}
+			out = append(out, r)
+		}
+	}
+	if !anyOK {
+		return nil, fmt.Errorf("raceresult: all result lists failed to load")
 	}
 	return out, nil
 }

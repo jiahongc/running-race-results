@@ -117,12 +117,21 @@ func TestLookup(t *testing.T) {
 		if len(got) == 0 {
 			t.Fatal("expected at least one result for 'Menzel'")
 		}
+		// The config exposes two individual lists (einzel Frauen + Männer),
+		// both served the same fixture here — a runner must not be duplicated.
+		seen := map[string]int{}
 		for _, r := range got {
 			if !strings.Contains(strings.ToLower(r.Runner), "menzel") {
 				t.Errorf("Runner %q does not contain 'menzel'", r.Runner)
 			}
 			if r.Bib == "" {
 				t.Errorf("result has empty Bib: %+v", r)
+			}
+			seen[r.Bib]++
+		}
+		for bib, n := range seen {
+			if n > 1 {
+				t.Errorf("bib %q appears %d times; SearchByName must dedup across lists", bib, n)
 			}
 		}
 	})
