@@ -87,12 +87,13 @@ func (c *Client) AthleteHistory(ctx context.Context, racerID string) ([]domain.R
 					RankA       int    `json:"RankA"`
 					TicksString string `json:"TicksString"`
 					EventID     int    `json:"EventID"`
-					CourseName  string `json:"CourseName"`
-					EventDate   string `json:"EventDate"`
 					Race        struct {
 						RaceName string `json:"RaceName"`
 						RaceDate string `json:"RaceDate"`
 						RaceID   int    `json:"RaceID"`
+						Courses  []struct {
+							CourseName string `json:"CourseName"`
+						} `json:"Courses"`
 					} `json:"Race"`
 				} `json:"List"`
 			} `json:"raceEntries"`
@@ -104,15 +105,19 @@ func (c *Client) AthleteHistory(ctx context.Context, racerID string) ([]domain.R
 	rows := body.Result.RaceEntries.List
 	out := make([]domain.Result, 0, len(rows))
 	for _, e := range rows {
-		date := e.EventDate
+		date := e.Race.RaceDate
 		if len(date) >= 10 {
-			date = date[:10] // trim to YYYY-MM-DD
+			date = date[:10] // trim "2023-06-03T..." to "2023-06-03"
+		}
+		distance := ""
+		if len(e.Race.Courses) > 0 {
+			distance = e.Race.Courses[0].CourseName
 		}
 		out = append(out, domain.Result{
 			Provider:      "athlinks",
 			RaceName:      e.Race.RaceName,
 			Date:          date,
-			Distance:      e.CourseName,
+			Distance:      distance,
 			Bib:           e.BibNum,
 			NetTime:       e.TicksString,
 			OverallPlace:  e.RankO,

@@ -76,7 +76,20 @@ func TestAthleteHistory(t *testing.T) {
 		t.Fatal("expected race history")
 	}
 	r := got[0]
-	if r.Provider != "athlinks" || r.RaceName == "" || r.NetTime == "" {
-		t.Fatalf("history row not mapped: %+v", r)
+	// Exact values from athlete-results.json List[0].
+	if r.Provider != "athlinks" {
+		t.Errorf("Provider: got %q", r.Provider)
+	}
+	if r.RaceName != "Mohican 100 Trail Run" {
+		t.Errorf("RaceName: got %q", r.RaceName)
+	}
+	if r.Date != "2023-06-03" {
+		t.Errorf("Date: got %q want 2023-06-03 (must come from Race.RaceDate, not the zero EventDate)", r.Date)
+	}
+	if r.Distance != "Trail Marathon" {
+		t.Errorf("Distance: got %q want Trail Marathon (from Race.Courses[0].CourseName)", r.Distance)
+	}
+	if r.NetTime != "6:21:25" {
+		t.Errorf("NetTime: got %q want 6:21:25", r.NetTime)
 	}
 }
