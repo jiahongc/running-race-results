@@ -21,6 +21,8 @@ type Result struct {
 	GenderPlace   int
 	AgeGroup      string
 	AgeGroupPlace int
+	Date          string // race date "YYYY-MM-DD" (athlete history); empty for bib lookups
+	Distance      string // course/distance label (athlete history); empty for bib lookups
 	Splits        []Split
 	SourceURL     string
 }
@@ -32,4 +34,15 @@ type Event struct {
 	Year     int
 	ID       string // provider-specific event identifier
 	BaseURL  string // provider-specific base, if needed
+}
+
+// Athlete is a person returned by a cross-event athlete search.
+type Athlete struct {
+	Provider   string
+	ID         string // provider racer/athlete id
+	Name       string
+	City       string
+	StateProv  string
+	Age        int
+	ProfileURL string
 }

@@ -19,3 +19,14 @@ func TestEventCarriesProviderRouting(t *testing.T) {
 		t.Fatal("event fields not retained")
 	}
 }
+
+func TestAthleteAndResultExtras(t *testing.T) {
+	a := Athlete{Provider: "athlinks", ID: "338681853", Name: "Jim Smith", City: "amadora", Age: 41}
+	if a.ID != "338681853" || a.Age != 41 {
+		t.Fatal("athlete fields not retained")
+	}
+	r := Result{Date: "2024-05-01", Distance: "Marathon"}
+	if r.Date != "2024-05-01" || r.Distance != "Marathon" {
+		t.Fatal("result extras not retained")
+	}
+}
