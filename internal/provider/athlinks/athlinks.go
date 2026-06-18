@@ -42,11 +42,6 @@ type searchEntry struct {
 	Age           int    `json:"age"`
 }
 
-// searchResponse wraps the data array returned by the search endpoint.
-type searchResponse struct {
-	Data []searchEntry `json:"data"`
-}
-
 // division represents one ranking division within an interval.
 type division struct {
 	Name         string `json:"name"`
@@ -106,14 +101,15 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		return domain.Result{}, fmt.Errorf("athlinks: search status %d", searchResp.StatusCode)
 	}
 
-	var sr searchResponse
-	if err := json.NewDecoder(searchResp.Body).Decode(&sr); err != nil {
+	// The search endpoint returns a bare JSON array of entries.
+	var entries []searchEntry
+	if err := json.NewDecoder(searchResp.Body).Decode(&entries); err != nil {
 		return domain.Result{}, fmt.Errorf("athlinks: decode search response: %w", err)
 	}
 
 	var raceID int
 	found := false
-	for _, e := range sr.Data {
+	for _, e := range entries {
 		if e.Bib == bib {
 			raceID = e.EventCourseID
 			found = true

@@ -35,6 +35,26 @@ func loadFixture(t *testing.T, path string) []byte {
 	return out
 }
 
+// loadFixtureField reads a JSON fixture and returns the raw bytes of a single
+// top-level field — used for the search fixture whose real API response is the
+// bare array stored under "data" by the capture wrapper.
+func loadFixtureField(t *testing.T, path, field string) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read fixture %s: %v", path, err)
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("unmarshal fixture %s: %v", path, err)
+	}
+	v, ok := m[field]
+	if !ok {
+		t.Fatalf("fixture %s missing field %q", path, field)
+	}
+	return v
+}
+
 var testEvent = domain.Event{
 	Provider: "athlinks",
 	ID:       "1094411",
@@ -44,7 +64,7 @@ var testEvent = domain.Event{
 
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	searchFixture := loadFixture(t, "../../../testdata/fixtures/athlinks/search.json")
+	searchFixture := loadFixtureField(t, "../../../testdata/fixtures/athlinks/search.json", "data")
 	detailFixture := loadFixture(t, "../../../testdata/fixtures/athlinks/detail.json")
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
