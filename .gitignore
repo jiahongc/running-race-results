@@ -5,6 +5,9 @@
 
 # Go
 /vendor/
+*.test
+coverage.out
+*.cover
 
 # Env / secrets — never commit API keys/tokens
 .env
