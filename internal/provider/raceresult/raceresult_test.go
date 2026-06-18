@@ -35,6 +35,11 @@ func loadFixture(t *testing.T, path string) []byte {
 	return out
 }
 
+// teamListJSON is a minimal list that has a BIB column (bib 1286 present) but
+// NO AnzeigeName and NO TIME1 columns — exactly what a team list looks like.
+// The adapter must skip it and proceed to the individual list.
+const teamListJSON = `{"DataFields":["BIB","ID","Team"],"data":{"#g":[["1286","1286","Some Team"]]}}`
+
 func TestLookup(t *testing.T) {
 	configFixture := loadFixture(t, "../../../testdata/fixtures/raceresult/config.json")
 	resultsFixture := loadFixture(t, "../../../testdata/fixtures/raceresult/results.json")
@@ -45,7 +50,14 @@ func TestLookup(t *testing.T) {
 		case strings.Contains(r.URL.Path, "/results/config"):
 			w.Write(configFixture)
 		case strings.Contains(r.URL.Path, "/results/list"):
-			w.Write(resultsFixture)
+			// Route by the listname query parameter: team lists get the team
+			// fixture (no name/time columns); individual lists get the real data.
+			listname := r.URL.Query().Get("listname")
+			if strings.Contains(listname, "teams") || strings.Contains(listname, "internet-teams") {
+				w.Write([]byte(teamListJSON))
+			} else {
+				w.Write(resultsFixture)
+			}
 		default:
 			http.NotFound(w, r)
 		}
@@ -64,6 +76,10 @@ func TestLookup(t *testing.T) {
 	}
 
 	t.Run("hit", func(t *testing.T) {
+		// The config fixture lists two team lists ("internet-teams - *") BEFORE
+		// the individual lists ("Internet-einzel - *"). The team lists contain
+		// bib 1286 but lack AnzeigeName/TIME1, so the adapter must skip them
+		// (ok=true, found=false) and find the result in the individual list.
 		result, err := c.Lookup(context.Background(), ev, "1286")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -113,51 +114,68 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 	}
 
 	contestID := "1"
-	for k := range cfg.Contests {
-		contestID = k
-		break
+	if len(cfg.Contests) > 0 {
+		keys := make([]string, 0, len(cfg.Contests))
+		for k := range cfg.Contests {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		contestID = keys[0]
 	}
 	dataBase := c.DataBaseURL
 	if dataBase == "" {
 		dataBase = "https://" + cfg.Server
 	}
 
+	anyOK := false
 	for _, l := range cfg.Tab.Config.Lists {
-		if res, found := c.searchList(ctx, dataBase, ev, cfg.Key, l.Name, contestID, bib); found {
+		res, found, ok := c.searchList(ctx, dataBase, ev, cfg.Key, l.Name, contestID, bib)
+		if ok {
+			anyOK = true
+		}
+		if found {
 			return res, nil
 		}
+	}
+	if !anyOK {
+		return domain.Result{}, fmt.Errorf("raceresult: all result lists failed to load")
 	}
 	return domain.Result{}, provider.ErrBibNotFound
 }
 
 // searchList queries one result list and returns the mapped result if the bib
-// is present. Per-list failures (network, non-200, decode, missing BIB column)
-// return found=false so the caller moves on to the next list.
-func (c *Client) searchList(ctx context.Context, dataBase string, ev domain.Event, key, listName, contestID, bib string) (domain.Result, bool) {
+// is present, along with two booleans:
+//   - found: the bib was located in the list
+//   - ok: the list was successfully fetched and decoded (network/non-200/decode
+//     failures return ok=false; missing BIB column also returns ok=false since
+//     the list is not usable). A list that was fetched/decoded but lacks
+//     AnzeigeName or TIME1 returns ok=true, found=false.
+func (c *Client) searchList(ctx context.Context, dataBase string, ev domain.Event, key, listName, contestID, bib string) (domain.Result, bool /*found*/, bool /*ok*/) {
 	listURL := fmt.Sprintf(
 		"%s/%s/results/list?key=%s&listname=%s&page=results&contest=%s&r=leaders&l=50&fav=&openedGroups=%%7B%%7D&term=",
 		dataBase, ev.ID, key, url.QueryEscape(listName), contestID,
 	)
 	resp, err := c.get(ctx, listURL)
 	if err != nil {
-		return domain.Result{}, false
+		return domain.Result{}, false, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return domain.Result{}, false
+		return domain.Result{}, false, false
 	}
 	var lr listResponse
 	if err := json.NewDecoder(resp.Body).Decode(&lr); err != nil {
-		return domain.Result{}, false
+		return domain.Result{}, false, false
 	}
 
 	idx := make(map[string]int, len(lr.DataFields))
 	for i, f := range lr.DataFields {
 		idx[f] = i
 	}
-	bibIdx, ok := idx["BIB"]
-	if !ok {
-		return domain.Result{}, false
+	bibIdx, hasBib := idx["BIB"]
+	if !hasBib {
+		// List has no BIB column — not usable at all.
+		return domain.Result{}, false, false
 	}
 	nameIdx, hasName := idx["AnzeigeName"]
 	timeIdx, hasTime := idx["TIME1"]
@@ -165,8 +183,9 @@ func (c *Client) searchList(ctx context.Context, dataBase string, ev domain.Even
 	// Only individual result lists carry the runner name + finish time. Team
 	// and organisation lists also contain the bib but lack these columns, so
 	// skip them — otherwise we'd return a partial (name/time-less) result.
+	// The list was successfully fetched, so ok=true even if we skip it.
 	if !hasName || !hasTime {
-		return domain.Result{}, false
+		return domain.Result{}, false, true
 	}
 
 	for _, rows := range lr.Data {
@@ -192,8 +211,8 @@ func (c *Client) searchList(ctx context.Context, dataBase string, ev domain.Even
 					res.OverallPlace = n
 				}
 			}
-			return res, true
+			return res, true, true
 		}
 	}
-	return domain.Result{}, false
+	return domain.Result{}, false, true
 }

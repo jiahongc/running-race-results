@@ -32,12 +32,12 @@ func (c *Client) Name() string { return "nyrr" }
 
 // searchRequest is the body sent to the finishers-filter endpoint.
 type searchRequest struct {
-	EventCode     string `json:"eventCode"`
-	SearchString  string `json:"searchString"`
-	PageIndex     int    `json:"pageIndex"`
-	PageSize      int    `json:"pageSize"`
-	SortColumn    string `json:"sortColumn"`
-	SortDescending bool  `json:"sortDescending"`
+	EventCode      string `json:"eventCode"`
+	SearchString   string `json:"searchString"`
+	PageIndex      int    `json:"pageIndex"`
+	PageSize       int    `json:"pageSize"`
+	SortColumn     string `json:"sortColumn"`
+	SortDescending bool   `json:"sortDescending"`
 }
 
 // searchResponse is the JSON envelope returned by the API.
@@ -47,23 +47,23 @@ type searchResponse struct {
 }
 
 type item struct {
-	RunnerID      int     `json:"runnerId"`
-	FirstName     string  `json:"firstName"`
-	LastName      string  `json:"lastName"`
-	Bib           string  `json:"bib"`
-	Age           int     `json:"age"`
-	Gender        string  `json:"gender"`
-	City          string  `json:"city"`
-	StateProvince string  `json:"stateProvince"`
-	CountryCode   string  `json:"countryCode"`
-	OverallPlace  int     `json:"overallPlace"`
-	OverallTime   string  `json:"overallTime"`
-	Pace          string  `json:"pace"`
-	GenderPlace   int     `json:"genderPlace"`
-	AgeGradeTime  string  `json:"ageGradeTime"`
-	AgeGradePlace int     `json:"ageGradePlace"`
+	RunnerID        int     `json:"runnerId"`
+	FirstName       string  `json:"firstName"`
+	LastName        string  `json:"lastName"`
+	Bib             string  `json:"bib"`
+	Age             int     `json:"age"`
+	Gender          string  `json:"gender"`
+	City            string  `json:"city"`
+	StateProvince   string  `json:"stateProvince"`
+	CountryCode     string  `json:"countryCode"`
+	OverallPlace    int     `json:"overallPlace"`
+	OverallTime     string  `json:"overallTime"`
+	Pace            string  `json:"pace"`
+	GenderPlace     int     `json:"genderPlace"`
+	AgeGradeTime    string  `json:"ageGradeTime"`
+	AgeGradePlace   int     `json:"ageGradePlace"`
 	AgeGradePercent float64 `json:"ageGradePercent"`
-	RacesCount    int     `json:"racesCount"`
+	RacesCount      int     `json:"racesCount"`
 }
 
 // Lookup implements provider.Provider.

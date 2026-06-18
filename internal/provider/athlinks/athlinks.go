@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jiahongchen/race-results/internal/domain"
@@ -44,10 +46,10 @@ type searchEntry struct {
 
 // division represents one ranking division within an interval.
 type division struct {
-	Name         string `json:"name"`
-	Rank         int    `json:"rank"`
-	TotalAthletes int   `json:"totalAthletes"`
-	Type         string `json:"type"`
+	Name          string `json:"name"`
+	Rank          int    `json:"rank"`
+	TotalAthletes int    `json:"totalAthletes"`
+	Type          string `json:"type"`
 }
 
 // interval represents one timing point (finish or split).
@@ -82,7 +84,7 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 
 	// Step 1: search to resolve raceId (eventCourseId).
 	searchURL := fmt.Sprintf("%s/event/%s/results/search?from=0&limit=20&term=%s",
-		c.BaseURL, ev.ID, bib)
+		c.BaseURL, ev.ID, url.QueryEscape(bib))
 	searchReq, err := http.NewRequestWithContext(ctx, http.MethodGet, searchURL, nil)
 	if err != nil {
 		return domain.Result{}, fmt.Errorf("athlinks: create search request: %w", err)
@@ -169,8 +171,10 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 			case "gender":
 				result.GenderPlace = div.Rank
 			case "other":
-				result.AgeGroup = div.Name
-				result.AgeGroupPlace = div.Rank
+				if strings.ContainsAny(div.Name, "0123456789") {
+					result.AgeGroup = div.Name
+					result.AgeGroupPlace = div.Rank
+				}
 			}
 		}
 		break

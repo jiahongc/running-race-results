@@ -74,6 +74,9 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		return domain.Result{}, fmt.Errorf("mika: search request: %w", err)
 	}
 	defer searchResp.Body.Close()
+	if searchResp.StatusCode != http.StatusOK {
+		return domain.Result{}, fmt.Errorf("mika: search status %d", searchResp.StatusCode)
+	}
 
 	searchDoc, err := html.Parse(searchResp.Body)
 	if err != nil {
@@ -102,6 +105,9 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		return domain.Result{}, fmt.Errorf("mika: detail request: %w", err)
 	}
 	defer detailResp.Body.Close()
+	if detailResp.StatusCode != http.StatusOK {
+		return domain.Result{}, fmt.Errorf("mika: detail status %d", detailResp.StatusCode)
+	}
 
 	doc, err := html.Parse(detailResp.Body)
 	if err != nil {
