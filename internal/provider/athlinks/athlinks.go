@@ -93,6 +93,8 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		return domain.Result{}, fmt.Errorf("athlinks: create search request: %w", err)
 	}
 	searchReq.Header.Set("Authorization", c.Token)
+	searchReq.Header.Set("Origin", "https://www.athlinks.com")
+	searchReq.Header.Set("Referer", "https://www.athlinks.com/")
 
 	searchResp, err := c.HTTP.Do(searchReq)
 	if err != nil {
@@ -130,6 +132,8 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		return domain.Result{}, fmt.Errorf("athlinks: create detail request: %w", err)
 	}
 	detailReq.Header.Set("Authorization", c.Token)
+	detailReq.Header.Set("Origin", "https://www.athlinks.com")
+	detailReq.Header.Set("Referer", "https://www.athlinks.com/")
 
 	detailResp, err := c.HTTP.Do(detailReq)
 	if err != nil {

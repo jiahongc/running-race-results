@@ -4,10 +4,8 @@ package mika
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,9 +34,6 @@ func New() *Client {
 // Name implements provider.Provider.
 func (c *Client) Name() string { return "mika" }
 
-// reIDP matches the idp query param inside a content=detail href.
-var reIDP = regexp.MustCompile(`content=detail[^"']*idp=([^&"']+)`)
-
 // Lookup implements provider.Provider.
 func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domain.Result, error) {
 	base := c.BaseURL
@@ -46,8 +41,17 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		base = ev.BaseURL
 	}
 
+	// When the event carries a year, include it in the path so the request
+	// lands directly on the year-scoped URL (e.g. /2025/) instead of hitting
+	// the root which issues a 301 redirect and causes Go's http.Client to
+	// convert the POST to a GET, dropping the form body.
+	yearBase := base
+	if ev.Year != 0 {
+		yearBase = fmt.Sprintf("%s/%d", strings.TrimRight(base, "/"), ev.Year)
+	}
+
 	// Step 1: POST search by bib.
-	searchURL := fmt.Sprintf("%s/?event=%s&pid=search", base, url.QueryEscape(ev.ID))
+	searchURL := fmt.Sprintf("%s/?event=%s&pid=search", yearBase, url.QueryEscape(ev.ID))
 	body := url.Values{
 		"search[name]":     {""},
 		"search[start_no]": {bib},
@@ -66,21 +70,22 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 	}
 	defer searchResp.Body.Close()
 
-	searchHTML, err := io.ReadAll(searchResp.Body)
+	searchDoc, err := html.Parse(searchResp.Body)
 	if err != nil {
-		return domain.Result{}, fmt.Errorf("mika: read search response: %w", err)
+		return domain.Result{}, fmt.Errorf("mika: parse search HTML: %w", err)
 	}
 
-	// Step 2: Extract first idp from a content=detail link.
-	m := reIDP.FindSubmatch(searchHTML)
-	if m == nil {
+	// Step 2: Extract idp from a content=detail link inside the result list.
+	// The results are in a <ul> whose class contains "list-group". Nav links
+	// live in <ul class="nav ..."> and must be ignored.
+	idp, ok := idpFromResultList(searchDoc)
+	if !ok {
 		return domain.Result{}, provider.ErrBibNotFound
 	}
-	idp := string(m[1])
 
 	// Step 3: GET detail page.
 	detailURL := fmt.Sprintf("%s/?content=detail&fpid=search&pid=search&idp=%s&lang=EN_CAP&event=%s",
-		base, url.QueryEscape(idp), url.QueryEscape(ev.ID))
+		yearBase, url.QueryEscape(idp), url.QueryEscape(ev.ID))
 	detailReq, err := http.NewRequestWithContext(ctx, http.MethodGet, detailURL, nil)
 	if err != nil {
 		return domain.Result{}, fmt.Errorf("mika: create detail request: %w", err)
@@ -127,6 +132,78 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		GenderPlace:  genderPlace,
 		SourceURL:    detailURL,
 	}, nil
+}
+
+// idpFromResultList walks the HTML tree, finds the first <ul> whose class
+// contains "list-group" but not "nav" (to skip navigation menus), then
+// searches its descendants for the first <a> whose href contains
+// "content=detail" and returns the idp query-param value from that href.
+func idpFromResultList(doc *html.Node) (string, bool) {
+	// findResultUL returns the first <ul> whose class contains "list-group"
+	// but is neither a nav menu (class "nav") nor the info bar
+	// (class "list-info"). The runner results live in a ul that additionally
+	// carries "list-group-multicolumn" or similar, but any ul.list-group
+	// that is not nav/list-info and contains a content=detail anchor is
+	// acceptable, so we look for the first one that yields a hit.
+	var findResultUL func(*html.Node) *html.Node
+	findResultUL = func(n *html.Node) *html.Node {
+		if n.Type == html.ElementNode && n.Data == "ul" {
+			cls := ""
+			for _, a := range n.Attr {
+				if a.Key == "class" {
+					cls = a.Val
+				}
+			}
+			if containsToken(cls, "list-group") &&
+				!containsToken(cls, "nav") &&
+				!containsToken(cls, "list-info") {
+				return n
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if found := findResultUL(c); found != nil {
+				return found
+			}
+		}
+		return nil
+	}
+
+	ul := findResultUL(doc)
+	if ul == nil {
+		return "", false
+	}
+
+	// findDetailAnchor searches the subtree for the first <a> with content=detail.
+	var findDetailAnchor func(*html.Node) string
+	findDetailAnchor = func(n *html.Node) string {
+		if n.Type == html.ElementNode && n.Data == "a" {
+			for _, a := range n.Attr {
+				if a.Key == "href" && strings.Contains(a.Val, "content=detail") {
+					// Parse the idp param out of the href.
+					// The href may be relative (e.g. "?content=detail&idp=ABC").
+					// Use a dummy base so url.Parse handles it.
+					u, err := url.Parse("http://x" + a.Val)
+					if err == nil {
+						if idp := u.Query().Get("idp"); idp != "" {
+							return idp
+						}
+					}
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if v := findDetailAnchor(c); v != "" {
+				return v
+			}
+		}
+		return ""
+	}
+
+	idp := findDetailAnchor(ul)
+	if idp == "" {
+		return "", false
+	}
+	return idp, true
 }
 
 // tdText walks the HTML tree and returns the trimmed text of the first <td>
