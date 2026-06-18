@@ -18,17 +18,19 @@ import (
 
 // Client is the Athlinks provider adapter.
 type Client struct {
-	BaseURL string
-	Token   string
-	HTTP    *http.Client
+	BaseURL   string
+	Token     string
+	HTTP      *http.Client
+	AlaskaURL string // alaska.athlinks.com host for the athlete endpoints
 }
 
 // New returns a Client configured for the Athlinks production API.
 func New() *Client {
 	return &Client{
-		BaseURL: "https://reignite-api.athlinks.com",
-		Token:   os.Getenv("ATHLINKS_TOKEN"),
-		HTTP:    &http.Client{Timeout: 15 * time.Second},
+		BaseURL:   "https://reignite-api.athlinks.com",
+		Token:     os.Getenv("ATHLINKS_TOKEN"),
+		HTTP:      &http.Client{Timeout: 15 * time.Second},
+		AlaskaURL: "https://alaska.athlinks.com",
 	}
 }
 
