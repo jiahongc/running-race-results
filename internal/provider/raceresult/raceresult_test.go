@@ -107,4 +107,23 @@ func TestLookup(t *testing.T) {
 			t.Errorf("expected ErrBibNotFound, got %v", err)
 		}
 	})
+
+	t.Run("SearchByName", func(t *testing.T) {
+		// "Menzel" appears as "Theresa Menzel" in the results fixture.
+		got, err := c.SearchByName(context.Background(), ev, "Menzel")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(got) == 0 {
+			t.Fatal("expected at least one result for 'Menzel'")
+		}
+		for _, r := range got {
+			if !strings.Contains(strings.ToLower(r.Runner), "menzel") {
+				t.Errorf("Runner %q does not contain 'menzel'", r.Runner)
+			}
+			if r.Bib == "" {
+				t.Errorf("result has empty Bib: %+v", r)
+			}
+		}
+	})
 }

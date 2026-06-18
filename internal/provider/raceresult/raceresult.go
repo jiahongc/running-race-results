@@ -216,3 +216,113 @@ func (c *Client) searchList(ctx context.Context, dataBase string, ev domain.Even
 	}
 	return domain.Result{}, false, true
 }
+
+// nameRows queries one result list for name-based search. It fetches the list
+// with term=name and returns all rows from individual lists (those with
+// AnzeigeName + TIME1) whose AnzeigeName contains the name (case-insensitive).
+// Returns nil rows and ok=false on fetch/decode failure.
+func (c *Client) nameRows(ctx context.Context, dataBase string, ev domain.Event, key, listName, contestID, name string) ([]domain.Result, bool /*ok*/) {
+	listURL := fmt.Sprintf(
+		"%s/%s/results/list?key=%s&listname=%s&page=results&contest=%s&r=leaders&l=50&fav=&openedGroups=%%7B%%7D&term=%s",
+		dataBase, ev.ID, key, url.QueryEscape(listName), contestID, url.QueryEscape(name),
+	)
+	resp, err := c.get(ctx, listURL)
+	if err != nil {
+		return nil, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, false
+	}
+	var lr listResponse
+	if err := json.NewDecoder(resp.Body).Decode(&lr); err != nil {
+		return nil, false
+	}
+
+	idx := make(map[string]int, len(lr.DataFields))
+	for i, f := range lr.DataFields {
+		idx[f] = i
+	}
+	bibIdx, hasBib := idx["BIB"]
+	nameIdx, hasName := idx["AnzeigeName"]
+	timeIdx, hasTime := idx["TIME1"]
+	rankIdx, hasRank := idx["RANK2p"]
+	if !hasBib || !hasName || !hasTime {
+		return nil, true // individual list required; skip team/org lists
+	}
+
+	q := strings.ToLower(name)
+	var out []domain.Result
+	for _, rows := range lr.Data {
+		for _, row := range rows {
+			if len(row) <= nameIdx {
+				continue
+			}
+			if !strings.Contains(strings.ToLower(string(row[nameIdx])), q) {
+				continue
+			}
+			res := domain.Result{
+				Provider:  "raceresult",
+				RaceName:  ev.Name,
+				Year:      ev.Year,
+				Runner:    string(row[nameIdx]),
+				SourceURL: "https://my.raceresult.com/" + ev.ID + "/results",
+			}
+			if hasBib && len(row) > bibIdx {
+				res.Bib = string(row[bibIdx])
+			}
+			if hasTime && len(row) > timeIdx {
+				res.NetTime = string(row[timeIdx])
+			}
+			if hasRank && len(row) > rankIdx {
+				if n, err := strconv.Atoi(nonDigit.ReplaceAllString(string(row[rankIdx]), "")); err == nil {
+					res.OverallPlace = n
+				}
+			}
+			out = append(out, res)
+		}
+	}
+	return out, true
+}
+
+// SearchByName implements provider.NameSearcher. It iterates the event's
+// individual result lists and collects rows whose AnzeigeName contains name.
+func (c *Client) SearchByName(ctx context.Context, ev domain.Event, name string) ([]domain.Result, error) {
+	configURL := fmt.Sprintf("%s/%s/results/config?lang=en", c.BaseURL, ev.ID)
+	resp, err := c.get(ctx, configURL)
+	if err != nil {
+		return nil, fmt.Errorf("raceresult: config request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("raceresult: config status %d", resp.StatusCode)
+	}
+	var cfg configResponse
+	if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("raceresult: decode config: %w", err)
+	}
+	if len(cfg.Tab.Config.Lists) == 0 {
+		return nil, fmt.Errorf("raceresult: no lists in config")
+	}
+
+	contestID := "1"
+	if len(cfg.Contests) > 0 {
+		keys := make([]string, 0, len(cfg.Contests))
+		for k := range cfg.Contests {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		contestID = keys[0]
+	}
+	dataBase := c.DataBaseURL
+	if dataBase == "" {
+		dataBase = "https://" + cfg.Server
+	}
+
+	var out []domain.Result
+	for _, l := range cfg.Tab.Config.Lists {
+		rows, _ := c.nameRows(ctx, dataBase, ev, cfg.Key, l.Name, contestID, name)
+		out = append(out, rows...)
+	}
+	return out, nil
+}
