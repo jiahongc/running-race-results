@@ -18,5 +18,6 @@ func NewRoot(reg *provider.Registry) *cobra.Command {
 		SilenceErrors: true,
 	}
 	root.AddCommand(newLookupCmd(reg, entries))
+	root.AddCommand(newAthleteCmd(reg))
 	return root
 }
