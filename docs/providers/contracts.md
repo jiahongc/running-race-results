@@ -252,6 +252,110 @@ _(you: register free API key)_
 ### Response → Result mapping
 
 ## Athlinks
-_(you: token capture)_
+
+Site: `https://www.athlinks.com/event/{masterEventId}/results/Event/{eventId}/Course/{raceId}/Bib/{bib}`
+
+Backend: `reignite-api.athlinks.com` (new events) + `results.athlinks.com` (legacy events).
+
+Auth: Keycloak authorization-code flow. Realm `athlinks`, client `www`, at `accounts.athlinks.com/auth/realms/athlinks/protocol/openid-connect/auth`. Token is a short-lived (~2h) user JWT. Pass as `Authorization: Bearer <token>`.
+
+**GAP — anonymous/service token:** direct POST to the token endpoint is CORS-blocked from browser context. It is not confirmed whether a `client_credentials` grant exists for `client_id=www`. The adapter will need to implement authorization-code flow or use a pre-shared token. Do not confuse the Keycloak `login-status-iframe.html/init` silent-SSO check with a token grant — that call does not return a token.
+
+### ID chain
+
+```
+masterEventId   — top-level event in URL (e.g. 390468)
+eventId         — reignite-api event instance (e.g. 1094411)
+raceId          — sub-course / eventCourseId (e.g. 2530164) — returned by search as eventCourseId
+azpEventId      — timer system event ID (ctlive, etc.) (e.g. 83293)
+azpEntryId/id   — per-entry ID (e.g. 70078023) — same value as thirdPartyEntryId in detail
+```
+
+Event metadata (courses, IDs):
+```
+GET https://alaska.athlinks.com/MasterEvents/Api/{masterEventId}
+```
+Returns full event structure including `eventRaces[].eventCourses[]` with `eventCourseId` (= raceId).
+
 ### Request
+
+**1. Bib/name search (required to resolve raceId per athlete):**
+```
+GET https://reignite-api.athlinks.com/event/{eventId}/results/search?from=0&limit=20&term={bib_or_name}
+Authorization: Bearer <token>
+```
+- `term` does prefix-match on bib and name
+- Returns array of entry objects; use `eventCourseId` as `raceId` for the detail call
+
+**2. Per-athlete detail:**
+```
+GET https://reignite-api.athlinks.com/event/{eventId}/race/{raceId}/bib/{bib}/result
+Authorization: Bearer <token>
+```
+- `raceId` = `eventCourseId` from search response
+
+**3. Paged results list (all athletes in event):**
+```
+GET https://reignite-api.athlinks.com/event/{eventId}/results?correlationId=&from={from}&limit={limit}
+Authorization: Bearer <token>
+```
+- Returns array grouped by race (course); each group has `division`, `intervals[].results[]`
+- Pagination: increment `from` by `limit`
+
+**4. Legacy results (no auth required — older events only):**
+```
+GET https://results.athlinks.com/event/{legacyEventId}?eventCourseId=&divisionId=&intervalId=&from=0&limit=20
+```
+- No `Authorization` header needed
+- Use for events not served by reignite-api
+
+Fixtures: `testdata/fixtures/athlinks/search.json`, `testdata/fixtures/athlinks/results.json`, `testdata/fixtures/athlinks/detail.json`
+
+Captured event: Paraguay Multisport Challenge 2024
+- `masterEventId`: 390468
+- `eventId`: 1094411
+- sample `raceId`: 2530164 (2 km Group 1)
+- sample bib: 8420
+
 ### Response → Result mapping
+
+**From search (`/results/search`):**
+- `bib` → BIB
+- `displayName` → name (all-caps in search; mixed case in detail)
+- `gender` ("M"/"F") → gender
+- `age` → age
+- `eventCourseId` → raceId (needed for detail call)
+- `azpEventId` → timer system event ID (needed for media/photo calls)
+- `azpEntryId` → entry ID
+
+**From detail (`/race/{raceId}/bib/{bib}/result`):**
+- `bib` → BIB
+- `displayName` → name (mixed case)
+- `gender` ("M"/"F") → gender
+- `age` → age
+- `status` → `"CONF"` = confirmed finish; also `"DNF"`, `"DNS"`
+- `intervals[]` where `full=true` → finish interval:
+  - `chipTimeInMillis` / 1000 → net time in seconds
+  - `gunTimeInMillis` / 1000 → gun time in seconds
+  - `divisions[]` where `type="overall"` → `rank` = overall place, `totalAthletes` = field size
+  - `divisions[]` where `type="gender"` → `rank` = gender place
+  - `divisions[]` where `type="other"` and name matches age group pattern (e.g. `"M30-39"`) → age group place
+- `intervals[]` where `full=false` → splits (by `name`, e.g. `"Lap km 1"`):
+  - `chipTimeInMillis` → split chip time
+  - `distance.meters` → distance from start at split point
+
+**From paged results (`/results`):**
+- Top-level array elements group by race; `race.id` = raceId, `race.name` = course name
+- `intervals[0].results[]` contains per-athlete rows with same fields as detail (minus splits):
+  - `bib`, `displayName`, `gender`, `age`, `chipTimeInMillis`, `gunTimeInMillis`, `status`
+  - `rankings.overall` → overall place
+  - `rankings.gender` → gender place
+  - `rankings.primary` → place within the division shown (not age group)
+- Note: age group place not present in list — fetch detail for age group rank
+
+**Time conversion:**
+```
+chipTimeInMillis / 1000  →  net seconds
+gunTimeInMillis / 1000   →  gun seconds
+```
+Format for display: `seconds → H:MM:SS` (standard Go `time.Duration` formatting).

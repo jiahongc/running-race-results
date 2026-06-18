@@ -1,0 +1,141 @@
+{
+  "_meta": {
+    "endpoint": "GET https://reignite-api.athlinks.com/event/{eventId}/results/search?from=0&limit=20&term={bib_or_name}",
+    "captured_url": "https://reignite-api.athlinks.com/event/1094411/results/search?from=0&limit=20&term=8420",
+    "event": "Paraguay Multisport Challenge 2024 (masterEventId=390468, eventId=1094411)",
+    "auth": "Authorization: Bearer <token> required",
+    "note": "Returns athletes whose bib starts with the term string (fuzzy prefix match). First result is the exact bib=8420 match."
+  },
+  "data": [
+    {
+      "age": 36,
+      "azp": "ctlive",
+      "azpEntryId": 70078023,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8420",
+      "displayName": "LAURO FABIAN CABRERA BERNAL",
+      "entryType": "IND",
+      "eventCourseId": 2530164,
+      "gender": "M",
+      "team": null
+    },
+    {
+      "age": 40,
+      "azp": "ctlive",
+      "azpEntryId": 70078054,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8429",
+      "displayName": "CANDACE MOBLEY",
+      "entryType": "IND",
+      "eventCourseId": 2530536,
+      "gender": "F",
+      "team": null
+    },
+    {
+      "age": 35,
+      "azp": "ctlive",
+      "azpEntryId": 70078029,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8426",
+      "displayName": "KELLY GONZALEZ",
+      "entryType": "IND",
+      "eventCourseId": 2530164,
+      "gender": "F",
+      "team": null
+    },
+    {
+      "age": 41,
+      "azp": "ctlive",
+      "azpEntryId": 70078055,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8422",
+      "displayName": "FERNANDO ELIAS",
+      "entryType": "IND",
+      "eventCourseId": 2530592,
+      "gender": "M",
+      "team": null
+    },
+    {
+      "age": 53,
+      "azp": "ctlive",
+      "azpEntryId": 70078042,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8424",
+      "displayName": "LUCIA GARCIA",
+      "entryType": "IND",
+      "eventCourseId": 2530536,
+      "gender": "F",
+      "team": null
+    },
+    {
+      "age": 31,
+      "azp": "ctlive",
+      "azpEntryId": 70078046,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8428",
+      "displayName": "MONICA MARIA DEL PILAR LEGUIZAMON FARIñA",
+      "entryType": "IND",
+      "eventCourseId": 2530536,
+      "gender": "F",
+      "team": null
+    },
+    {
+      "age": 31,
+      "azp": "ctlive",
+      "azpEntryId": 70078036,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8423",
+      "displayName": "ALEJANDRA MARÍA BELÉN ENRIQUE AÑAZCO",
+      "entryType": "IND",
+      "eventCourseId": 2530537,
+      "gender": "F",
+      "team": null
+    },
+    {
+      "age": 31,
+      "azp": "ctlive",
+      "azpEntryId": 70078021,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8425",
+      "displayName": "SEBASTIAN GIMéNEZ",
+      "entryType": "IND",
+      "eventCourseId": 2530536,
+      "gender": "M",
+      "team": null
+    },
+    {
+      "age": 24,
+      "azp": "ctlive",
+      "azpEntryId": 70078039,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8427",
+      "displayName": "YTHUEL KTUL",
+      "entryType": "IND",
+      "eventCourseId": 2530592,
+      "gender": "M",
+      "team": null
+    },
+    {
+      "age": 48,
+      "azp": "ctlive",
+      "azpEntryId": 70078050,
+      "azpEventId": 83293,
+      "azpTeamEntryId": null,
+      "bib": "8421",
+      "displayName": "CARLOS MANUEL CAPURRO FERNANDEZ",
+      "entryType": "IND",
+      "eventCourseId": 2530164,
+      "gender": "M",
+      "team": null
+    }
+  ]
+}
