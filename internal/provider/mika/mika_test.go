@@ -3,12 +3,10 @@ package mika
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -16,55 +14,19 @@ import (
 	"github.com/jiahongchen/race-results/internal/provider"
 )
 
-// reHeaderLine strips a leading "### ...\n" line (printing-press capture format).
-var reHeaderLine = regexp.MustCompile(`(?m)^###[^\n]*\n`)
-
-// loadFixtureHTML reads a printing-press HTML fixture (stored as a JSON-encoded
-// string, optionally preceded by a "### Result" header line) and returns the
-// raw HTML bytes ready to serve.
-func loadFixtureHTML(t *testing.T, path string) []byte {
+func readFixture(t *testing.T, path string) []byte {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read fixture %s: %v", path, err)
-	}
-	// Strip optional leading header line(s).
-	cleaned := reHeaderLine.ReplaceAll(raw, nil)
-	cleaned = []byte(strings.TrimSpace(string(cleaned)))
-
-	// The file may contain extra content after the closing JSON quote
-	// (e.g. a trailing "### Ran Playwright code" block).  Find the end of
-	// the first JSON string value (opening " at index 0).
-	if len(cleaned) == 0 || cleaned[0] != '"' {
-		t.Fatalf("fixture %s: expected JSON string, got %q…", path, string(cleaned[:min(20, len(cleaned))]))
-	}
-	end := 1
-	for end < len(cleaned) {
-		if cleaned[end] == '"' && cleaned[end-1] != '\\' {
-			break
-		}
-		end++
-	}
-	jsonStr := cleaned[:end+1]
-
-	var decoded string
-	if err := json.Unmarshal(jsonStr, &decoded); err != nil {
-		t.Fatalf("fixture %s: json.Unmarshal: %v", path, err)
-	}
-	return []byte(decoded)
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
 	}
 	return b
 }
 
 func testServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	searchHTML := loadFixtureHTML(t, "../../../testdata/fixtures/mika/search.html")
-	detailHTML := loadFixtureHTML(t, "../../../testdata/fixtures/mika/detail.html")
+	searchHTML := readFixture(t, "../../../testdata/fixtures/mika/search.html")
+	detailHTML := readFixture(t, "../../../testdata/fixtures/mika/detail.html")
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()

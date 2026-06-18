@@ -119,8 +119,8 @@ Detail HTML (`testdata/fixtures/mika/detail.html`), CSS class selectors:
 - `td.f-start_no_text` → bib
 - `td.f-time_finish_netto` → chip time (net)
 - `td.f-time_finish_brutto` → gun time
-- `td.f-place_all` → overall place
-- `td.f-place_nosex` → gender place
+- `td.f-place_nosex` → **overall** place ("Place (Total)")
+- `td.f-place_all` → **gender** place ("Place (M/W/D)")  ⚠️ class name is misleading; verified against the captured detail page
 - `td.f-place_age` → age group place
 - Split times at checkpoints: `td.f-time_15000`, `td.f-time_half`, `td.f-time_30000`, `td.f-time_40000`, etc.
 
