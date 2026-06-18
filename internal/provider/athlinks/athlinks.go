@@ -78,18 +78,17 @@ func formatSeconds(secs int64) string {
 	return fmt.Sprintf("%d:%02d:%02d", h, m, s)
 }
 
-// Lookup implements provider.Provider.
-func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domain.Result, error) {
+// searchEntries calls the /results/search endpoint with the given term and
+// returns the raw slice of entries.
+func (c *Client) searchEntries(ctx context.Context, ev domain.Event, term string) ([]searchEntry, error) {
 	if c.Token == "" {
-		return domain.Result{}, errors.New("athlinks: ATHLINKS_TOKEN not set")
+		return nil, errors.New("athlinks: ATHLINKS_TOKEN not set")
 	}
-
-	// Step 1: search to resolve raceId (eventCourseId).
 	searchURL := fmt.Sprintf("%s/event/%s/results/search?from=0&limit=20&term=%s",
-		c.BaseURL, ev.ID, url.QueryEscape(bib))
+		c.BaseURL, ev.ID, url.QueryEscape(term))
 	searchReq, err := http.NewRequestWithContext(ctx, http.MethodGet, searchURL, nil)
 	if err != nil {
-		return domain.Result{}, fmt.Errorf("athlinks: create search request: %w", err)
+		return nil, fmt.Errorf("athlinks: create search request: %w", err)
 	}
 	searchReq.Header.Set("Authorization", c.Token)
 	searchReq.Header.Set("Origin", "https://www.athlinks.com")
@@ -97,18 +96,53 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 
 	searchResp, err := c.HTTP.Do(searchReq)
 	if err != nil {
-		return domain.Result{}, fmt.Errorf("athlinks: search request: %w", err)
+		return nil, fmt.Errorf("athlinks: search request: %w", err)
 	}
 	defer searchResp.Body.Close()
 
 	if searchResp.StatusCode != http.StatusOK {
-		return domain.Result{}, fmt.Errorf("athlinks: search status %d", searchResp.StatusCode)
+		return nil, fmt.Errorf("athlinks: search status %d", searchResp.StatusCode)
 	}
 
-	// The search endpoint returns a bare JSON array of entries.
 	var entries []searchEntry
 	if err := json.NewDecoder(searchResp.Body).Decode(&entries); err != nil {
-		return domain.Result{}, fmt.Errorf("athlinks: decode search response: %w", err)
+		return nil, fmt.Errorf("athlinks: decode search response: %w", err)
+	}
+	return entries, nil
+}
+
+// SearchByName implements provider.NameSearcher. It uses the /results/search
+// endpoint with the name as term and returns light Results (runner name + bib).
+func (c *Client) SearchByName(ctx context.Context, ev domain.Event, name string) ([]domain.Result, error) {
+	entries, err := c.searchEntries(ctx, ev, name)
+	if err != nil {
+		return nil, err
+	}
+	q := strings.ToLower(name)
+	var out []domain.Result
+	for _, e := range entries {
+		if !strings.Contains(strings.ToLower(e.DisplayName), q) {
+			continue
+		}
+		out = append(out, domain.Result{
+			Provider: "athlinks",
+			RaceName: ev.Name,
+			Year:     ev.Year,
+			Runner:   e.DisplayName,
+			Bib:      e.Bib,
+			SourceURL: fmt.Sprintf("%s/event/%s/results/search?term=%s",
+				c.BaseURL, ev.ID, url.QueryEscape(name)),
+		})
+	}
+	return out, nil
+}
+
+// Lookup implements provider.Provider.
+func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domain.Result, error) {
+	// Step 1: search to resolve raceId (eventCourseId).
+	entries, err := c.searchEntries(ctx, ev, bib)
+	if err != nil {
+		return domain.Result{}, err
 	}
 
 	var raceID int

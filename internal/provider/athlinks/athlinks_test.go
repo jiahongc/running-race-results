@@ -154,3 +154,29 @@ func TestLookup_NoToken(t *testing.T) {
 		t.Errorf("expected error mentioning ATHLINKS_TOKEN, got: %v", err)
 	}
 }
+
+func TestSearchByName(t *testing.T) {
+	srv := newTestServer(t)
+	defer srv.Close()
+
+	c := New()
+	c.BaseURL = srv.URL
+	c.Token = "Bearer test"
+
+	// The fixture contains "LAURO FABIAN CABRERA BERNAL"; search for "BERNAL".
+	got, err := c.SearchByName(context.Background(), testEvent, "BERNAL")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("expected at least one result for 'BERNAL'")
+	}
+	for _, r := range got {
+		if !strings.Contains(strings.ToUpper(r.Runner), "BERNAL") {
+			t.Errorf("Runner %q does not contain 'BERNAL'", r.Runner)
+		}
+		if r.Bib == "" {
+			t.Errorf("result has empty Bib: %+v", r)
+		}
+	}
+}
