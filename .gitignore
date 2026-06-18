@@ -15,5 +15,8 @@
 docs/superpowers/
 docs/brainstorms/
 
+# Browser automation artifacts
+.playwright-mcp/
+
 # OS
 .DS_Store
