@@ -17,6 +17,10 @@ import (
 	"github.com/jiahongchen/race-results/internal/provider"
 )
 
+// userAgent is a browser-like UA. Mika's host returns 403 to the default
+// Go-http-client UA, so a realistic UA is required.
+const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
 // Client is the Mika Timing provider adapter.
 type Client struct {
 	BaseURL string
@@ -63,6 +67,7 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 		return domain.Result{}, fmt.Errorf("mika: create search request: %w", err)
 	}
 	searchReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	searchReq.Header.Set("User-Agent", userAgent)
 
 	searchResp, err := c.HTTP.Do(searchReq)
 	if err != nil {
@@ -90,6 +95,7 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 	if err != nil {
 		return domain.Result{}, fmt.Errorf("mika: create detail request: %w", err)
 	}
+	detailReq.Header.Set("User-Agent", userAgent)
 
 	detailResp, err := c.HTTP.Do(detailReq)
 	if err != nil {
