@@ -109,3 +109,47 @@ func TestLookup_Miss(t *testing.T) {
 		t.Errorf("expected ErrBibNotFound, got: %v", err)
 	}
 }
+
+func TestSearchByName(t *testing.T) {
+	srv := testServer(t)
+	defer srv.Close()
+
+	c := New()
+	c.BaseURL = srv.URL
+
+	ev := domain.Event{
+		Provider: "mika",
+		ID:       "BML_HCH3C0OH2F2",
+		Name:     "BMW Berlin Marathon",
+		Year:     2025,
+	}
+
+	// search.html was captured for "Müller" — result rows contain Müller variants.
+	got, err := c.SearchByName(context.Background(), ev, "Müller")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("expected at least one result for 'Müller'")
+	}
+	// All rows must have Runner and Bib populated.
+	for _, r := range got {
+		if r.Runner == "" {
+			t.Errorf("result has empty Runner: %+v", r)
+		}
+		if r.Bib == "" {
+			t.Errorf("result has empty Bib: %+v", r)
+		}
+	}
+	// At least one result must contain "müller".
+	found := false
+	for _, r := range got {
+		if strings.Contains(strings.ToLower(r.Runner), "müller") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("no result Runner contains 'müller'; got: %v", got)
+	}
+}

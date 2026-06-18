@@ -146,6 +146,179 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 	}, nil
 }
 
+// SearchByName implements provider.NameSearcher. It parses the search results
+// page for a name query, collecting each result list row's runner name + bib
+// without fetching individual detail pages.
+func (c *Client) SearchByName(ctx context.Context, ev domain.Event, name string) ([]domain.Result, error) {
+	base := c.BaseURL
+	if ev.BaseURL != "" {
+		base = ev.BaseURL
+	}
+	yearBase := base
+	if ev.Year != 0 {
+		yearBase = fmt.Sprintf("%s/%d", strings.TrimRight(base, "/"), ev.Year)
+	}
+
+	searchURL := fmt.Sprintf("%s/?event=%s&pid=search", yearBase, url.QueryEscape(ev.ID))
+	body := url.Values{
+		"search[name]":     {name},
+		"search[start_no]": {""},
+		"search[nation]":   {""},
+		"Search":           {"Search"},
+	}
+	searchReq, err := http.NewRequestWithContext(ctx, http.MethodPost, searchURL, strings.NewReader(body.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("mika: create search request: %w", err)
+	}
+	searchReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	searchReq.Header.Set("User-Agent", userAgent)
+
+	searchResp, err := c.HTTP.Do(searchReq)
+	if err != nil {
+		return nil, fmt.Errorf("mika: search request: %w", err)
+	}
+	defer searchResp.Body.Close()
+	if searchResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("mika: search status %d", searchResp.StatusCode)
+	}
+
+	doc, err := html.Parse(searchResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("mika: parse search HTML: %w", err)
+	}
+
+	return parseSearchRows(doc, ev), nil
+}
+
+// parseSearchRows walks the result <ul> and extracts runner name + bib from
+// each non-header list-group-item <li>.
+func parseSearchRows(doc *html.Node, ev domain.Event) []domain.Result {
+	var findResultUL func(*html.Node) *html.Node
+	findResultUL = func(n *html.Node) *html.Node {
+		if n.Type == html.ElementNode && n.Data == "ul" {
+			cls := ""
+			for _, a := range n.Attr {
+				if a.Key == "class" {
+					cls = a.Val
+				}
+			}
+			if containsToken(cls, "list-group") &&
+				!containsToken(cls, "nav") &&
+				!containsToken(cls, "list-info") {
+				return n
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if found := findResultUL(c); found != nil {
+				return found
+			}
+		}
+		return nil
+	}
+
+	ul := findResultUL(doc)
+	if ul == nil {
+		return nil
+	}
+
+	var out []domain.Result
+	for li := ul.FirstChild; li != nil; li = li.NextSibling {
+		if li.Type != html.ElementNode || li.Data != "li" {
+			continue
+		}
+		cls := ""
+		for _, a := range li.Attr {
+			if a.Key == "class" {
+				cls = a.Val
+			}
+		}
+		if !containsToken(cls, "list-group-item") || containsToken(cls, "list-group-header") {
+			continue
+		}
+
+		runnerName := liRunnerName(li)
+		bib := liBib(li)
+		if runnerName == "" && bib == "" {
+			continue
+		}
+		out = append(out, domain.Result{
+			Provider: "mika",
+			RaceName: ev.Name,
+			Year:     ev.Year,
+			Runner:   parseName(runnerName),
+			Bib:      bib,
+		})
+	}
+	return out
+}
+
+// liRunnerName finds the text of the <h4 class="...type-fullname..."> anchor in a li.
+func liRunnerName(li *html.Node) string {
+	var find func(*html.Node) string
+	find = func(n *html.Node) string {
+		if n.Type == html.ElementNode && n.Data == "h4" {
+			cls := ""
+			for _, a := range n.Attr {
+				if a.Key == "class" {
+					cls = a.Val
+				}
+			}
+			if containsToken(cls, "type-fullname") {
+				// Return text of the first <a> child, or direct text content.
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					if c.Type == html.ElementNode && c.Data == "a" {
+						return strings.TrimSpace(textContent(c))
+					}
+				}
+				return strings.TrimSpace(textContent(n))
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if v := find(c); v != "" {
+				return v
+			}
+		}
+		return ""
+	}
+	return find(li)
+}
+
+// liBib finds the bib number from the first type-field div in a li.
+// The bib text is a direct text node sibling of the inner label div.
+func liBib(li *html.Node) string {
+	var find func(*html.Node) string
+	find = func(n *html.Node) string {
+		if n.Type == html.ElementNode && n.Data == "div" {
+			cls := ""
+			for _, a := range n.Attr {
+				if a.Key == "class" {
+					cls = a.Val
+				}
+			}
+			if containsToken(cls, "type-field") && !containsToken(cls, "list-group-header") {
+				// Collect direct text-node content (skipping child element text).
+				var sb strings.Builder
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					if c.Type == html.TextNode {
+						sb.WriteString(c.Data)
+					}
+				}
+				v := strings.TrimSpace(sb.String())
+				if v != "" {
+					return v
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if v := find(c); v != "" {
+				return v
+			}
+		}
+		return ""
+	}
+	return find(li)
+}
+
 // idpFromResultList walks the HTML tree, finds the first <ul> whose class
 // contains "list-group" but not "nav" (to skip navigation menus), then
 // searches its descendants for the first <a> whose href contains
