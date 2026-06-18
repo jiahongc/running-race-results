@@ -40,3 +40,26 @@ func TestRegistryMissing(t *testing.T) {
 		t.Fatal("expected missing provider")
 	}
 }
+
+type fakeAthlete struct{}
+
+func (fakeAthlete) Name() string { return "fa" }
+func (fakeAthlete) Lookup(_ context.Context, _ domain.Event, _ string) (domain.Result, error) {
+	return domain.Result{}, nil
+}
+func (fakeAthlete) FindAthletes(_ context.Context, _ string) ([]domain.Athlete, error) {
+	return []domain.Athlete{{ID: "1", Name: "X"}}, nil
+}
+func (fakeAthlete) AthleteHistory(_ context.Context, _ string) ([]domain.Result, error) {
+	return []domain.Result{{RaceName: "R"}}, nil
+}
+
+func TestCapabilityAssertions(t *testing.T) {
+	var p Provider = fakeAthlete{}
+	if _, ok := p.(AthleteSearcher); !ok {
+		t.Fatal("fakeAthlete should satisfy AthleteSearcher")
+	}
+	if _, ok := p.(NameSearcher); ok {
+		t.Fatal("fakeAthlete should NOT satisfy NameSearcher")
+	}
+}

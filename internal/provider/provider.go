@@ -34,3 +34,15 @@ func (r *Registry) Get(name string) (Provider, bool) {
 	p, ok := r.providers[name]
 	return p, ok
 }
+
+// NameSearcher is an optional capability: search a runner by name within a
+// resolved event. Providers implement it when their search accepts a name.
+type NameSearcher interface {
+	SearchByName(ctx context.Context, event domain.Event, name string) ([]domain.Result, error)
+}
+
+// AthleteSearcher is an optional capability: a cross-event athlete index.
+type AthleteSearcher interface {
+	FindAthletes(ctx context.Context, name string) ([]domain.Athlete, error)
+	AthleteHistory(ctx context.Context, racerID string) ([]domain.Result, error)
+}
