@@ -81,14 +81,14 @@ func (c *Client) AthleteHistory(ctx context.Context, racerID string) ([]domain.R
 		Result struct {
 			RaceEntries struct {
 				List []struct {
-					BibNum      string      `json:"BibNum"`
-					RankO       int         `json:"RankO"`
-					RankG       int         `json:"RankG"`
-					RankA       int         `json:"RankA"`
-					TicksString string      `json:"TicksString"`
-					EventID     int         `json:"EventID"`
-					CourseName  string      `json:"CourseName"`
-					EventDate   string      `json:"EventDate"`
+					BibNum      string `json:"BibNum"`
+					RankO       int    `json:"RankO"`
+					RankG       int    `json:"RankG"`
+					RankA       int    `json:"RankA"`
+					TicksString string `json:"TicksString"`
+					EventID     int    `json:"EventID"`
+					CourseName  string `json:"CourseName"`
+					EventDate   string `json:"EventDate"`
 					Race        struct {
 						RaceName string `json:"RaceName"`
 						RaceDate string `json:"RaceDate"`
