@@ -1,0 +1,19 @@
+# Binaries
+/race-results
+*.exe
+*.out
+
+# Go
+/vendor/
+
+# Env / secrets — never commit API keys/tokens
+.env
+.env.*
+*.local
+
+# Local working docs (specs/plans/brainstorms are not project artifacts)
+docs/superpowers/
+docs/brainstorms/
+
+# OS
+.DS_Store
