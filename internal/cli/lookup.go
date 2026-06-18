@@ -3,6 +3,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jiahongchen/race-results/internal/catalog"
 	"github.com/jiahongchen/race-results/internal/provider"
@@ -22,6 +23,14 @@ func newLookupCmd(reg *provider.Registry) *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			race, bib := args[0], args[1]
+
+			if year == 0 && date != "" {
+				t, perr := time.Parse("2006-01-02", date)
+				if perr != nil {
+					return fmt.Errorf("invalid --date %q (want YYYY-MM-DD): %w", date, perr)
+				}
+				year = t.Year()
+			}
 
 			entries, err := catalog.Load()
 			if err != nil {

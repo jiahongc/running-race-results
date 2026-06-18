@@ -46,3 +46,19 @@ func TestLookupUnknownRaceErrors(t *testing.T) {
 		t.Fatal("expected error for unknown race")
 	}
 }
+
+func TestLookupDeriveYearFromDate(t *testing.T) {
+	reg := provider.NewRegistry()
+	reg.Register(stubProvider{})
+	root := NewRoot(reg)
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&out)
+	root.SetArgs([]string{"lookup", "berlin", "1234", "--date", "2025-09-28"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !strings.Contains(out.String(), "2025") {
+		t.Fatalf("expected 2025 edition resolved:\n%s", out.String())
+	}
+}
