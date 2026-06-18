@@ -48,6 +48,36 @@ func TestLookupUnknownRaceErrors(t *testing.T) {
 	}
 }
 
+type stubNameProvider struct{}
+
+func (stubNameProvider) Name() string { return "mika" }
+func (stubNameProvider) Lookup(_ context.Context, e domain.Event, bib string) (domain.Result, error) {
+	return domain.Result{Provider: "mika", RaceName: e.Name, Year: e.Year, Bib: bib, Runner: "Jane Doe", NetTime: "02:45:10"}, nil
+}
+func (stubNameProvider) SearchByName(_ context.Context, ev domain.Event, name string) ([]domain.Result, error) {
+	return []domain.Result{
+		{Provider: "mika", RaceName: ev.Name, Runner: "Jane Müller", Bib: "11", NetTime: "03:00:00"},
+		{Provider: "mika", RaceName: ev.Name, Runner: "John Müller", Bib: "12", NetTime: "03:10:00"},
+	}, nil
+}
+
+func TestLookupByName(t *testing.T) {
+	reg := provider.NewRegistry()
+	reg.Register(stubNameProvider{})
+	entries := []catalog.Entry{{Race: "BMW Berlin Marathon", Aliases: []string{"berlin"}, Provider: "mika", Year: 2025}}
+	cmd := newLookupCmd(reg, entries)
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"berlin", "--name", "Müller", "--year", "2025"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !strings.Contains(out.String(), "Jane Müller") || !strings.Contains(out.String(), "John Müller") {
+		t.Fatalf("expected name matches:\n%s", out.String())
+	}
+}
+
 func TestLookupDeriveYearFromDate(t *testing.T) {
 	reg := provider.NewRegistry()
 	reg.Register(stubProvider{})
