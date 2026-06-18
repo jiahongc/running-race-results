@@ -37,6 +37,32 @@ func TestJSONRoundTrips(t *testing.T) {
 	}
 }
 
+func TestTablePlaces(t *testing.T) {
+	r := domain.Result{Provider: "athlinks", RaceName: "R", Year: 2024, Runner: "A B", Bib: "7",
+		OverallPlace: 3, GenderPlace: 2, AgeGroup: "M30-39", AgeGroupPlace: 1}
+	var b bytes.Buffer
+	if err := Table(&b, r); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	for _, want := range []string{"Gender place", "Age group", "M30-39", "Age group place"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("table missing %q in:\n%s", want, out)
+		}
+	}
+}
+
+func TestTableOmitsZeroPlaces(t *testing.T) {
+	r := domain.Result{Provider: "x", RaceName: "R", Year: 2024, Runner: "A B", Bib: "9"}
+	var b bytes.Buffer
+	if err := Table(&b, r); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(b.String(), "Gender place") {
+		t.Fatalf("table showed a zero gender place:\n%s", b.String())
+	}
+}
+
 func TestTableOmitsZeroYear(t *testing.T) {
 	r := domain.Result{Provider: "x", RaceName: "Some Race", Runner: "A B", Bib: "9"}
 	var b bytes.Buffer

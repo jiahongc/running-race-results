@@ -30,7 +30,13 @@ func Table(w io.Writer, r domain.Result) error {
 	if r.OverallPlace > 0 {
 		row("Overall place", fmt.Sprintf("%d", r.OverallPlace))
 	}
+	if r.GenderPlace > 0 {
+		row("Gender place", fmt.Sprintf("%d", r.GenderPlace))
+	}
 	row("Age group", r.AgeGroup)
+	if r.AgeGroupPlace > 0 {
+		row("Age group place", fmt.Sprintf("%d", r.AgeGroupPlace))
+	}
 	row("Source", r.SourceURL)
 	return tw.Flush()
 }
