@@ -5,7 +5,7 @@ A command-line tool that looks up a runner's race result across multiple timing 
 ```
 race-results lookup "<race name>" <bib>            # by bib
 race-results lookup "<race name>" --name "<name>"  # by name, within the race
-race-results athlete "<name>" | --racer-id <id> | --me   # cross-event history (Athlinks)
+race-results athlete "<name>" [--provider athlinks|nyrr] | --racer-id <id> | --me   # cross-event history
 ```
 
 ```console
@@ -83,16 +83,23 @@ race-results lookup "berlin marathon" 73664 --year 2025 --json
 Pass exactly one of `<bib>` or `--name`. A name that matches several runners
 prints a list to refine by bib; an ambiguous race name lists the editions.
 
-### Athlete history across events (Athlinks)
+### Athlete history across events
 
 ```bash
-# All of a person's races; pick from the list if the name is common
+# Athlinks (default) — all of a person's races; pick from the list if the name is common
 race-results athlete "Meisha Smith-Bystrom"
 race-results athlete --racer-id 43234281
 
-# Your own history — racer id is read from ATHLINKS_TOKEN, no name needed
+# Your own Athlinks history — racer id read from ATHLINKS_TOKEN, no name needed
 race-results athlete --me
+
+# NYRR history (all of someone's NYRR races)
+race-results athlete --provider nyrr "John Smith"
+race-results athlete --provider nyrr --racer-id 2969961
 ```
+
+`--provider` selects the history source (`athlinks` default, or `nyrr`). `--me`
+is Athlinks-only (it reads the racer id from the token).
 
 ```console
 $ race-results athlete --me
