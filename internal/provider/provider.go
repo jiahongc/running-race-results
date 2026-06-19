@@ -35,15 +35,6 @@ func (r *Registry) Get(name string) (Provider, bool) {
 	return p, ok
 }
 
-// Names returns the registered provider names.
-func (r *Registry) Names() []string {
-	out := make([]string, 0, len(r.providers))
-	for n := range r.providers {
-		out = append(out, n)
-	}
-	return out
-}
-
 // NameSearcher is an optional capability: search a runner by name within a
 // resolved event. Providers implement it when their search accepts a name.
 type NameSearcher interface {

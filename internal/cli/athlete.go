@@ -28,15 +28,29 @@ func newAthleteCmd(reg *provider.Registry) *cobra.Command {
 	var racerID string
 	var useMe bool
 	var asJSON bool
+	var providerName string
 
 	cmd := &cobra.Command{
 		Use:   `athlete "<name>"`,
-		Short: "Show a runner's race history across events (Athlinks)",
-		Args:  cobra.MaximumNArgs(1),
+		Short: "Show a runner's race history across events (athlinks|nyrr)",
+		Long: `Show a runner's cross-event race history.
+
+Use --provider to select the athlete-history provider (default: athlinks).
+Supported providers: athlinks, nyrr.`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			as := firstAthleteSearcher(reg)
-			if as == nil {
-				return fmt.Errorf("no athlete-search provider registered")
+			p, ok := reg.Get(providerName)
+			if !ok {
+				return fmt.Errorf("unknown provider %q", providerName)
+			}
+			as, ok := p.(provider.AthleteSearcher)
+			if !ok {
+				return fmt.Errorf("provider %q has no athlete history", providerName)
+			}
+
+			// --me is Athlinks-specific.
+			if useMe && providerName != "athlinks" {
+				return fmt.Errorf("--me only works with --provider athlinks")
 			}
 
 			// Resolve a racer id: --me, --racer-id, or a name search.
@@ -85,21 +99,11 @@ func newAthleteCmd(reg *provider.Registry) *cobra.Command {
 			return render.List(cmd.OutOrStdout(), history, historyCols)
 		},
 	}
-	cmd.Flags().StringVar(&racerID, "racer-id", "", "Athlinks racer id (skip name search)")
-	cmd.Flags().BoolVar(&useMe, "me", false, "use the racer id from ATHLINKS_TOKEN")
+	cmd.Flags().StringVar(&racerID, "racer-id", "", "Racer id (skip name search)")
+	cmd.Flags().BoolVar(&useMe, "me", false, "use the racer id from ATHLINKS_TOKEN (athlinks only)")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "output JSON")
+	cmd.Flags().StringVar(&providerName, "provider", "athlinks", "athlete-history provider (athlinks|nyrr)")
 	return cmd
-}
-
-func firstAthleteSearcher(reg *provider.Registry) provider.AthleteSearcher {
-	for _, name := range reg.Names() {
-		if p, ok := reg.Get(name); ok {
-			if as, ok := p.(provider.AthleteSearcher); ok {
-				return as
-			}
-		}
-	}
-	return nil
 }
 
 func getenvAthlinksToken() string { return os.Getenv("ATHLINKS_TOKEN") }
