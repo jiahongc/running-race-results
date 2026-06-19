@@ -119,6 +119,9 @@ func (c *Client) FindAthletes(ctx context.Context, name string) ([]domain.Athlet
 	seen := make(map[int]struct{}, len(resp.Items))
 	out := make([]domain.Athlete, 0, len(resp.Items))
 	for _, it := range resp.Items {
+		if it.RunnerID == 0 {
+			continue // no usable athlete id
+		}
 		if _, dup := seen[it.RunnerID]; dup {
 			continue
 		}
@@ -138,9 +141,11 @@ func (c *Client) FindAthletes(ctx context.Context, name string) ([]domain.Athlet
 // AthleteHistory implements provider.AthleteSearcher.
 func (c *Client) AthleteHistory(ctx context.Context, racerID string) ([]domain.Result, error) {
 	req := raceHistoryRequest{
-		RunnerID:       racerID,
-		PageIndex:      1,
-		PageSize:       51,
+		RunnerID:  racerID,
+		PageIndex: 1,
+		// Single-page fetch; 250 covers any realistic NYRR career (sorted by
+		// date desc, so the most recent races win if a runner exceeds it).
+		PageSize:       250,
 		SortColumn:     "EventDate",
 		SortDescending: true,
 	}
