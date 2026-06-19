@@ -19,6 +19,7 @@ func Table(w io.Writer, r domain.Result) error {
 			fmt.Fprintf(tw, "%s\t%s\n", label, val)
 		}
 	}
+	row("Provider", r.Provider)
 	if r.Year > 0 {
 		row("Race", fmt.Sprintf("%s %d", r.RaceName, r.Year))
 	} else {
