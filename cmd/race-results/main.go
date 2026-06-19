@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jiahongchen/race-results/internal/cli"
-	"github.com/jiahongchen/race-results/internal/provider"
-	"github.com/jiahongchen/race-results/internal/provider/athlinks"
-	"github.com/jiahongchen/race-results/internal/provider/mika"
-	"github.com/jiahongchen/race-results/internal/provider/nyrr"
-	"github.com/jiahongchen/race-results/internal/provider/raceresult"
+	"github.com/jiahongc/running-race-results/internal/cli"
+	"github.com/jiahongc/running-race-results/internal/provider"
+	"github.com/jiahongc/running-race-results/internal/provider/athlinks"
+	"github.com/jiahongc/running-race-results/internal/provider/mika"
+	"github.com/jiahongc/running-race-results/internal/provider/nyrr"
+	"github.com/jiahongc/running-race-results/internal/provider/raceresult"
 )
 
 var version = "0.1.0"

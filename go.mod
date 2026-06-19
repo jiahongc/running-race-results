@@ -1,4 +1,4 @@
-module github.com/jiahongchen/race-results
+module github.com/jiahongc/running-race-results
 
 go 1.26.4
 

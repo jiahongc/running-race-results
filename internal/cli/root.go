@@ -2,8 +2,8 @@
 package cli
 
 import (
-	"github.com/jiahongchen/race-results/internal/catalog"
-	"github.com/jiahongchen/race-results/internal/provider"
+	"github.com/jiahongc/running-race-results/internal/catalog"
+	"github.com/jiahongc/running-race-results/internal/provider"
 	"github.com/spf13/cobra"
 )
 

@@ -56,6 +56,16 @@ race name + bib
 Requires **Go 1.26.4+**.
 
 ```bash
+# Install the CLI directly
+go install github.com/jiahongc/running-race-results/cmd/race-results@latest
+race-results --help
+```
+
+Or build from a clone:
+
+```bash
+git clone https://github.com/jiahongc/running-race-results
+cd running-race-results
 go build -o race-results ./cmd/race-results
 ./race-results --help
 ```

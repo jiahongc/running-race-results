@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/jiahongchen/race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/domain"
 )
 
 // athReq issues an authenticated GET with the headers the Athlinks API requires.

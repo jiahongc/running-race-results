@@ -13,8 +13,8 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/jiahongchen/race-results/internal/domain"
-	"github.com/jiahongchen/race-results/internal/provider"
+	"github.com/jiahongc/running-race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/provider"
 )
 
 // userAgent is a browser-like UA. Mika's host returns 403 to the default

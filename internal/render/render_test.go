@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jiahongchen/race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/domain"
 )
 
 func sample() domain.Result {

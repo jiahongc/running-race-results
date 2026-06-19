@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jiahongchen/race-results/internal/domain"
-	"github.com/jiahongchen/race-results/internal/provider"
+	"github.com/jiahongc/running-race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/provider"
 )
 
 func readFixture(t *testing.T, path string) []byte {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/jiahongchen/race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/domain"
 )
 
 // Table writes a human-readable two-column view; empty fields are skipped.

@@ -4,7 +4,7 @@ package resolve
 import (
 	"testing"
 
-	"github.com/jiahongchen/race-results/internal/catalog"
+	"github.com/jiahongc/running-race-results/internal/catalog"
 )
 
 func seed() []catalog.Entry {

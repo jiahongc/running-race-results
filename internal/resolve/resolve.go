@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/jiahongchen/race-results/internal/catalog"
-	"github.com/jiahongchen/race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/catalog"
+	"github.com/jiahongc/running-race-results/internal/domain"
 )
 
 // ErrNoMatch means no catalog entry scored above the match threshold.

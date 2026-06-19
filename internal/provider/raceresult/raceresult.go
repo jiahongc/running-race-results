@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jiahongchen/race-results/internal/domain"
-	"github.com/jiahongchen/race-results/internal/provider"
+	"github.com/jiahongc/running-race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/provider"
 )
 
 // userAgent is a browser-like UA; the RaceResult hosts may reject the default

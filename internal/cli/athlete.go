@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jiahongchen/race-results/internal/domain"
-	"github.com/jiahongchen/race-results/internal/provider"
-	"github.com/jiahongchen/race-results/internal/provider/athlinks"
-	"github.com/jiahongchen/race-results/internal/render"
+	"github.com/jiahongc/running-race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/provider"
+	"github.com/jiahongc/running-race-results/internal/provider/athlinks"
+	"github.com/jiahongc/running-race-results/internal/render"
 	"github.com/spf13/cobra"
 )
 

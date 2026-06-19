@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/jiahongchen/race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/domain"
 )
 
 // runnerSearchRequest is the body for /api/v2/runners/search.

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jiahongchen/race-results/internal/catalog"
-	"github.com/jiahongchen/race-results/internal/domain"
-	"github.com/jiahongchen/race-results/internal/provider"
-	"github.com/jiahongchen/race-results/internal/render"
-	"github.com/jiahongchen/race-results/internal/resolve"
+	"github.com/jiahongc/running-race-results/internal/catalog"
+	"github.com/jiahongc/running-race-results/internal/domain"
+	"github.com/jiahongc/running-race-results/internal/provider"
+	"github.com/jiahongc/running-race-results/internal/render"
+	"github.com/jiahongc/running-race-results/internal/resolve"
 	"github.com/spf13/cobra"
 )
 
