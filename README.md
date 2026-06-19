@@ -30,8 +30,6 @@ There is no single API for race results — each timing platform is different. T
 | **Mika Timing** | Berlin + World Marathon Majors (Boston, Chicago, London, Tokyo, …) | ✅ live |
 | **Athlinks** | Aggregator (many events worldwide) | ✅ live — needs `ATHLINKS_TOKEN` |
 | **RaceResult** | Events on `my.raceresult.com` | ✅ live |
-| **RunSignup** | Large US race base | 🔜 planned (free API key) |
-| **Race Roster** | `results.raceroster.com` events | 🔜 planned |
 
 ## How it works
 
@@ -116,7 +114,6 @@ Secrets are read from the environment (never hardcoded). Put them in a local `.e
 | Variable | Used by | Notes |
 |----------|---------|-------|
 | `ATHLINKS_TOKEN` | Athlinks | A `Bearer …` token from the Athlinks frontend. Short-lived (~2h). |
-| `RUNSIGNUP_API_KEY` | RunSignup (planned) | Free key from <https://runsignup.com/API>. |
 
 ```bash
 # .env

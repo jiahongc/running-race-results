@@ -217,62 +217,6 @@ Example (Alexander Müller, bib 73664, Berlin Marathon 2025):
 
 ---
 
-## Race Roster
-
-Site: `https://results.raceroster.com/v3/events/{eventUniqueCode}`
-
-Event discovery: event page at `raceroster.com/events/{year}/{eventId}/{slug}` contains a link to `results.raceroster.com/v3/events/{eventUniqueCode}`.
-
-### Request
-
-**Participant search:**
-```
-GET https://results.raceroster.com/v2/api/events/{eventUniqueCode}/participant-search?phrase={name}
-```
-Returns: `{ data: { exact: [...], other: [...] } }` — each item has `id`, `firstName`, `lastName`, `bib`, `gender`, `age`, `resultSubEventId`, `teamName`.
-
-**Sub-event metadata:**
-```
-GET https://results.raceroster.com/v2/api/events/{eventUniqueCode}/sub-events/{subEventId}
-```
-Returns sub-event config: `{ id, name, distance, distanceUnit, resultCount, columns, filters }`.
-
-**Individual result (flat):**
-```
-GET https://results.raceroster.com/v2/api/results/{participantId}
-```
-Returns flat result object.
-
-**Individual result (detail with stats/certificates):**
-```
-GET https://results.raceroster.com/v2/api/events/{eventUniqueCode}/detail/{participantId}
-```
-Returns: `{ result: {...}, participant: {...}, finisherCertificate: {...}, stats: {...}, segmentResults: null }`.
-
-Captured event: 2024 TCS Toronto Waterfront Marathon — Virtual Half Marathon
-- `eventUniqueCode`: `4p3khwy5ujzf2v33`
-- `subEventId`: `213657`
-- `participantId`: `xf6gytfz69fm6mj6` (Nancy Stonos-Smith)
-
-### Response → Result mapping
-
-Fixtures: `testdata/fixtures/raceroster/search.json`, `testdata/fixtures/raceroster/result.json`
-
-From `/v2/api/results/{participantId}`:
-- `bib` → BIB (empty string for virtual events)
-- `firstName` + `lastName` → name
-- `overallPlace` → overall rank (of `genderPlaceCount` total in gender)
-- `genderPlace` → gender rank
-- `gunTime` → finish time (format `H:MM:SS`)
-- `gunTimeSec` → finish time in seconds
-- `overallPace` → pace per km (format `MM:SS`)
-- `overallPaceUnits` → `"min/km"` or `"min/mi"`
-- `age`, `gender` ("Female"/"Male"), `fromCity`, `fromProvState`, `fromCountry` → athlete metadata
-- `teamName` → team/club
-- `raceStatus`: `"COMPLETE"` | `"DNF"` | `"DNS"`
-
----
-
 ## RaceResult
 
 Site: `https://my.raceresult.com/{eventId}/results`
@@ -332,11 +276,6 @@ Detail response: `{ Data: { SplitsAndLegs: { Splits, Legs }, Fields, Certificate
 - `Data.Photos`: array of photo URLs (Sportograf etc.)
 
 ---
-
-## RunSignup
-_(you: register free API key)_
-### Request
-### Response → Result mapping
 
 ## Athlinks
 

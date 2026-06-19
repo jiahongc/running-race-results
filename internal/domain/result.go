@@ -29,7 +29,7 @@ type Result struct {
 
 // Event is a resolved race edition the resolver hands to an adapter.
 type Event struct {
-	Provider string // "nyrr","mika","athlinks","runsignup","raceroster","raceresult"
+	Provider string // "nyrr","mika","athlinks","raceresult"
 	Name     string
 	Year     int
 	ID       string // provider-specific event identifier
