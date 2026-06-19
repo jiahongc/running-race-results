@@ -1,9 +1,11 @@
 # Running Race Results
 
-A command-line tool that looks up a runner's race result by **race name + bib number**, across multiple timing providers. The race name is fuzzy-matched, so `"berlin marathon"` resolves to the right event.
+A command-line tool that looks up a runner's race result across multiple timing providers. Look up by **bib** or by **runner name** within a race, or pull an athlete's **full history across events**. Race names are fuzzy-matched, so `"berlin marathon"` resolves to the right event.
 
 ```
-race-results lookup "<race name>" <bib> [--year YYYY] [--date YYYY-MM-DD] [--json]
+race-results lookup "<race name>" <bib>            # by bib
+race-results lookup "<race name>" --name "<name>"  # by name, within the race
+race-results athlete "<name>" | --racer-id <id> | --me   # cross-event history (Athlinks)
 ```
 
 ```console
@@ -62,18 +64,43 @@ go build -o race-results ./cmd/race-results
 
 ## Usage
 
+### Look up one result — by bib or by name
+
 ```bash
-# Look up by race name + bib
+# By bib
 race-results lookup "mini 10k" 19 --year 2026
 
 # Disambiguate the edition by date (year is derived)
 race-results lookup "berlin marathon" 73664 --date 2025-09-28
 
-# Machine-readable output
+# By runner name within a race (any provider)
+race-results lookup "berlin marathon" --name "Müller" --year 2025
+
+# Machine-readable output (works on every command)
 race-results lookup "berlin marathon" 73664 --year 2025 --json
 ```
 
-If a race name matches multiple events, the tool lists the candidates; refine with `--year` or a fuller name.
+Pass exactly one of `<bib>` or `--name`. A name that matches several runners
+prints a list to refine by bib; an ambiguous race name lists the editions.
+
+### Athlete history across events (Athlinks)
+
+```bash
+# All of a person's races; pick from the list if the name is common
+race-results athlete "Meisha Smith-Bystrom"
+race-results athlete --racer-id 43234281
+
+# Your own history — racer id is read from ATHLINKS_TOKEN, no name needed
+race-results athlete --me
+```
+
+```console
+$ race-results athlete --me
+Date        Race                                  Distance       Net time  Overall
+2025-09-21  Berlin Marathon                       Marathon       3:34:01   8917
+2025-10-05  Jersey City 5K                        5K Run         18:52     187
+...
+```
 
 ## Configuration
 
