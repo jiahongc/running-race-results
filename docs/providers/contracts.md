@@ -74,6 +74,93 @@ Field mapping:
 - `age`, `gender` ("W"/"M"), `city`, `countryCode`, `stateProvince` → athlete metadata
 - `ageGradePercent` → age grade %
 
+### Runner history (cross-event)
+
+NYRR **does** expose a cross-event runner history. The runner profile page at
+`results.nyrr.org/runner/{runnerId}/races` is powered by three endpoints, all
+keyed by the internal `runnerId` (integer from `runners/search` — **not**
+`externalRunnerId`).
+
+**Step 1 — name → runnerId disambiguation:**
+
+```
+POST https://rmsprodapi.nyrr.org/api/v2/runners/search
+Content-Type: application/json
+
+{"searchString":"John Smith","pageIndex":1,"pageSize":51,"sortColumn":null,"sortDescending":false}
+```
+
+Response (`testdata/fixtures/nyrr/runner-search.json`): `{totalItems, items:[{runnerId, externalRunnerId, firstName, lastName, age, gender, city, stateProvince, countryCode, bib, racesCount, eventCode, ...}]}`.
+Each item is the runner's most-recent event entry. `racesCount` is the total NYRR race count for that person.
+Runner is identified in subsequent calls by `runnerId` (integer, NYRR-internal).
+
+**Step 2 — fetch race history:**
+
+```
+POST https://rmsprodapi.nyrr.org/api/v2/runners/races
+Content-Type: application/json
+
+{
+  "runnerId": "2969961",
+  "searchString": null,
+  "year": null,
+  "distance": null,
+  "teamCode": null,
+  "overallPlaceFrom": null, "overallPlaceTo": null,
+  "paceFrom": null, "paceTo": null,
+  "overallTimeFrom": null, "overallTimeTo": null,
+  "gunTimeFrom": null, "gunTimeTo": null,
+  "ageGradedTimeFrom": null, "ageGradedTimeTo": null,
+  "ageGradedPlaceFrom": null, "ageGradedPlaceTo": null,
+  "ageGradedPerformanceFrom": null, "ageGradedPerformanceTo": null,
+  "pageIndex": 1,
+  "pageSize": 51,
+  "sortColumn": "EventDate",
+  "sortDescending": true
+}
+```
+
+Response (`testdata/fixtures/nyrr/runner-history.json`):
+```json
+{
+  "totalItems": 34,
+  "items": [
+    {
+      "runnerId": "2969961",
+      "bib": "7629",
+      "eventCode": "a51113",
+      "eventName": "NYRR Cross Country Champs.",
+      "venue": "Van Cortlandt Park, Bronx, NYC",
+      "distanceName": "5 kilometers",
+      "startDateTime": "2005-11-13T10:00:00",
+      "actualTime": "0:21:40",
+      "actualPace": "06:59"
+    }
+  ]
+}
+```
+
+Field mapping:
+- `eventName` → race name
+- `startDateTime` → race date (ISO 8601)
+- `distanceName` → distance (free-text, e.g. `"Half-Marathon"`, `"10 kilometers"`)
+- `actualTime` → finish time (format `H:MM:SS`)
+- `actualPace` → pace per mile (format `MM:SS`)
+- `bib` → bib number
+- `eventCode` → NYRR event code (use to link back to per-event results via `runners/finishers-filter`)
+- `venue` → race location
+- `runnerId` → varies per row — note: **row-level `runnerId` is a per-event result ID**, not the
+  athlete ID; the athlete ID (`"2969961"` in the request body) stays fixed. Use the request body
+  value, not per-row values, to identify the athlete.
+
+**Notes:**
+- No auth needed — standard browser headers only (`Referer: https://results.nyrr.org/`)
+- Pagination: `pageIndex` (1-based), `pageSize`
+- Optional filters: `year` (string e.g. `"2005"`), `distance` (e.g. `"HALF"`, `"10K"`) from the
+  `runners/racesFilter` helper endpoint which returns available year/distance facets for a given runner
+- Runner is keyed by `runnerId` (integer from `runners/search`); `externalRunnerId` is a secondary
+  ID present on some records but not required for this call
+
 ---
 
 ## Mika
