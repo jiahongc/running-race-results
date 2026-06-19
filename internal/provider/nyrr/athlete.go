@@ -138,37 +138,41 @@ func (c *Client) FindAthletes(ctx context.Context, name string) ([]domain.Athlet
 	return out, nil
 }
 
-// AthleteHistory implements provider.AthleteSearcher.
+// AthleteHistory implements provider.AthleteSearcher. NYRR caps pageSize at 100
+// (larger values 400), so the full history is paged in 100-race chunks.
 func (c *Client) AthleteHistory(ctx context.Context, racerID string) ([]domain.Result, error) {
-	req := raceHistoryRequest{
-		RunnerID:  racerID,
-		PageIndex: 1,
-		// Single-page fetch; 250 covers any realistic NYRR career (sorted by
-		// date desc, so the most recent races win if a runner exceeds it).
-		PageSize:       250,
-		SortColumn:     "EventDate",
-		SortDescending: true,
-	}
-	var resp raceHistoryResponse
-	if err := c.postJSON(ctx, "/api/v2/runners/races", req, &resp); err != nil {
-		return nil, err
-	}
-
-	out := make([]domain.Result, 0, len(resp.Items))
-	for _, it := range resp.Items {
-		date := it.StartDateTime
-		if len(date) >= 10 {
-			date = date[:10]
+	const pageSize = 100
+	var out []domain.Result
+	for page := 1; ; page++ {
+		req := raceHistoryRequest{
+			RunnerID:       racerID,
+			PageIndex:      page,
+			PageSize:       pageSize,
+			SortColumn:     "EventDate",
+			SortDescending: true,
 		}
-		out = append(out, domain.Result{
-			Provider:  "nyrr",
-			RaceName:  it.EventName,
-			Date:      date,
-			Distance:  it.DistanceName,
-			NetTime:   it.ActualTime,
-			Bib:       it.Bib,
-			SourceURL: "https://results.nyrr.org/races/" + it.EventCode + "/results",
-		})
+		var resp raceHistoryResponse
+		if err := c.postJSON(ctx, "/api/v2/runners/races", req, &resp); err != nil {
+			return nil, err
+		}
+		for _, it := range resp.Items {
+			date := it.StartDateTime
+			if len(date) >= 10 {
+				date = date[:10]
+			}
+			out = append(out, domain.Result{
+				Provider:  "nyrr",
+				RaceName:  it.EventName,
+				Date:      date,
+				Distance:  it.DistanceName,
+				NetTime:   it.ActualTime,
+				Bib:       it.Bib,
+				SourceURL: "https://results.nyrr.org/races/" + it.EventCode + "/results",
+			})
+		}
+		if len(resp.Items) < pageSize || len(out) >= resp.TotalItems {
+			break
+		}
 	}
 	return out, nil
 }
