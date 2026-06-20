@@ -138,6 +138,9 @@ func TestLookup_Miss(t *testing.T) {
 	}
 }
 
+// TestLookup_NoToken verifies the token is optional: with no token set, the
+// public search + detail endpoints are queried anonymously and the lookup
+// succeeds.
 func TestLookup_NoToken(t *testing.T) {
 	srv := newTestServer(t)
 	defer srv.Close()
@@ -146,9 +149,30 @@ func TestLookup_NoToken(t *testing.T) {
 	c2.BaseURL = srv.URL
 	c2.Token = ""
 
-	_, err := c2.Lookup(context.Background(), testEvent, "8420")
+	got, err := c2.Lookup(context.Background(), testEvent, "8420")
+	if err != nil {
+		t.Fatalf("anonymous lookup should succeed, got: %v", err)
+	}
+	if got.Runner != "Lauro Fabian Cabrera Bernal" {
+		t.Errorf("Runner: got %q, want %q", got.Runner, "Lauro Fabian Cabrera Bernal")
+	}
+}
+
+// TestLookup_AuthGated verifies the fallback: when an endpoint returns 401/403
+// and no token is set, the error tells the user to set ATHLINKS_TOKEN.
+func TestLookup_AuthGated(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+	}))
+	defer srv.Close()
+
+	c := New()
+	c.BaseURL = srv.URL
+	c.Token = ""
+
+	_, err := c.Lookup(context.Background(), testEvent, "8420")
 	if err == nil {
-		t.Fatal("expected error when token is empty, got nil")
+		t.Fatal("expected error on 403 with no token, got nil")
 	}
 	if !strings.Contains(err.Error(), "ATHLINKS_TOKEN") {
 		t.Errorf("expected error mentioning ATHLINKS_TOKEN, got: %v", err)

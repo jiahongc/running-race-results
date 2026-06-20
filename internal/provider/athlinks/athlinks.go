@@ -37,6 +37,29 @@ func New() *Client {
 // Name implements provider.Provider.
 func (c *Client) Name() string { return "athlinks" }
 
+// setAuth applies the headers Athlinks expects. The Authorization header is sent
+// only when a token is configured: the athlete, search, and detail endpoints are
+// publicly accessible, so the token is an optional fallback for auth-gated events.
+func (c *Client) setAuth(req *http.Request) {
+	if c.Token != "" {
+		req.Header.Set("Authorization", c.Token)
+	}
+	req.Header.Set("Origin", "https://www.athlinks.com")
+	req.Header.Set("Referer", "https://www.athlinks.com/")
+}
+
+// authStatusErr maps a 401/403 — the only statuses a token would fix — to a clear
+// "needs a token" error. It returns nil for every other status.
+func (c *Client) authStatusErr(status int) error {
+	if status != http.StatusUnauthorized && status != http.StatusForbidden {
+		return nil
+	}
+	if c.Token == "" {
+		return errors.New("athlinks: endpoint requires auth — set ATHLINKS_TOKEN")
+	}
+	return errors.New("athlinks: ATHLINKS_TOKEN rejected (expired?)")
+}
+
 // searchEntry is one element from the search results array.
 type searchEntry struct {
 	Bib           string `json:"bib"`
@@ -81,18 +104,13 @@ func formatSeconds(secs int64) string {
 // searchEntries calls the /results/search endpoint with the given term and
 // returns the raw slice of entries.
 func (c *Client) searchEntries(ctx context.Context, ev domain.Event, term string) ([]searchEntry, error) {
-	if c.Token == "" {
-		return nil, errors.New("athlinks: ATHLINKS_TOKEN not set")
-	}
 	searchURL := fmt.Sprintf("%s/event/%s/results/search?from=0&limit=20&term=%s",
 		c.BaseURL, ev.ID, url.QueryEscape(term))
 	searchReq, err := http.NewRequestWithContext(ctx, http.MethodGet, searchURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("athlinks: create search request: %w", err)
 	}
-	searchReq.Header.Set("Authorization", c.Token)
-	searchReq.Header.Set("Origin", "https://www.athlinks.com")
-	searchReq.Header.Set("Referer", "https://www.athlinks.com/")
+	c.setAuth(searchReq)
 
 	searchResp, err := c.HTTP.Do(searchReq)
 	if err != nil {
@@ -101,6 +119,9 @@ func (c *Client) searchEntries(ctx context.Context, ev domain.Event, term string
 	defer searchResp.Body.Close()
 
 	if searchResp.StatusCode != http.StatusOK {
+		if err := c.authStatusErr(searchResp.StatusCode); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("athlinks: search status %d", searchResp.StatusCode)
 	}
 
@@ -165,9 +186,7 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 	if err != nil {
 		return domain.Result{}, fmt.Errorf("athlinks: create detail request: %w", err)
 	}
-	detailReq.Header.Set("Authorization", c.Token)
-	detailReq.Header.Set("Origin", "https://www.athlinks.com")
-	detailReq.Header.Set("Referer", "https://www.athlinks.com/")
+	c.setAuth(detailReq)
 
 	detailResp, err := c.HTTP.Do(detailReq)
 	if err != nil {
@@ -176,6 +195,9 @@ func (c *Client) Lookup(ctx context.Context, ev domain.Event, bib string) (domai
 	defer detailResp.Body.Close()
 
 	if detailResp.StatusCode != http.StatusOK {
+		if err := c.authStatusErr(detailResp.StatusCode); err != nil {
+			return domain.Result{}, err
+		}
 		return domain.Result{}, fmt.Errorf("athlinks: detail status %d", detailResp.StatusCode)
 	}
 

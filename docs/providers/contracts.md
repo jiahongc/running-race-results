@@ -283,9 +283,9 @@ Site: `https://www.athlinks.com/event/{masterEventId}/results/Event/{eventId}/Co
 
 Backend: `reignite-api.athlinks.com` (new events) + `results.athlinks.com` (legacy events).
 
-Auth: Keycloak authorization-code flow. Realm `athlinks`, client `www`, at `accounts.athlinks.com/auth/realms/athlinks/protocol/openid-connect/auth`. Token is a short-lived (~2h) user JWT. Pass as `Authorization: Bearer <token>`.
+Auth: **optional.** The athlete (`alaska.athlinks.com/athletes/api/*`), reignite `results/search`, and per-athlete `result` detail endpoints are publicly accessible with **no** `Authorization` header (verified live 2026-06-18). A token is needed only to derive your own racer id (the `athlete --me` path) and as a fallback for the occasional auth-gated endpoint. When supplied it is a short-lived (~2h) user JWT from the Keycloak authorization-code flow (realm `athlinks`, client `www`, at `accounts.athlinks.com/auth/realms/athlinks/protocol/openid-connect/auth`), passed as `Authorization: Bearer <token>`.
 
-**GAP — anonymous/service token:** direct POST to the token endpoint is CORS-blocked from browser context. It is not confirmed whether a `client_credentials` grant exists for `client_id=www`. The adapter will need to implement authorization-code flow or use a pre-shared token. Do not confuse the Keycloak `login-status-iframe.html/init` silent-SSO check with a token grant — that call does not return a token.
+**Anonymous access (verified live 2026-06-18):** `athletes/api/find`, `athletes/api/{racerId}/Races`, `event/{eventId}/results/search`, the per-athlete `result` detail, and the paged `event/{eventId}/results` list all return real data with **no** `Authorization` header (HTTP 200). The adapter sends requests anonymously and only falls back to requiring `ATHLINKS_TOKEN` if a request returns 401/403. (Historical note: a direct browser POST to the Keycloak token endpoint is CORS-blocked and no `client_credentials` grant for `client_id=www` is confirmed — but neither matters now that the data endpoints are open. The `login-status-iframe.html/init` silent-SSO check is not a token grant.)
 
 ### ID chain
 
@@ -308,7 +308,7 @@ Returns full event structure including `eventRaces[].eventCourses[]` with `event
 **1. Bib/name search (required to resolve raceId per athlete):**
 ```
 GET https://reignite-api.athlinks.com/event/{eventId}/results/search?from=0&limit=20&term={bib_or_name}
-Authorization: Bearer <token>
+Authorization: Bearer <token>   # optional — sent only when ATHLINKS_TOKEN is set
 ```
 - `term` does prefix-match on bib and name
 - Returns array of entry objects; use `eventCourseId` as `raceId` for the detail call
@@ -316,14 +316,14 @@ Authorization: Bearer <token>
 **2. Per-athlete detail:**
 ```
 GET https://reignite-api.athlinks.com/event/{eventId}/race/{raceId}/bib/{bib}/result
-Authorization: Bearer <token>
+Authorization: Bearer <token>   # optional — sent only when ATHLINKS_TOKEN is set
 ```
 - `raceId` = `eventCourseId` from search response
 
 **3. Paged results list (all athletes in event):**
 ```
 GET https://reignite-api.athlinks.com/event/{eventId}/results?correlationId=&from={from}&limit={limit}
-Authorization: Bearer <token>
+Authorization: Bearer <token>   # optional — sent only when ATHLINKS_TOKEN is set
 ```
 - Returns array grouped by race (course); each group has `division`, `intervals[].results[]`
 - Pagination: increment `from` by `limit`
@@ -388,7 +388,7 @@ Format for display: `seconds → H:MM:SS` (standard Go `time.Duration` formattin
 
 ### Athlete (cross-event)
 
-These two endpoints are served by `alaska.athlinks.com` (the legacy GraphQL-style API), not `reignite-api.athlinks.com`. Auth is the same Keycloak bearer token.
+These two endpoints are served by `alaska.athlinks.com` (the legacy GraphQL-style API), not `reignite-api.athlinks.com`. Auth is optional here too — both return real data anonymously (verified live 2026-06-18); when sent, the token is the same Keycloak bearer token.
 
 **1. Athlete search by name:**
 ```
@@ -400,7 +400,7 @@ GET https://alaska.athlinks.com/athletes/api/find?searchTerm={name}&limit={n}&sk
     &swim=true&mountainBike=true&cycling=true&snow=true
     &adventure=true&obstacle=true&other=true
     &gender=&fromAge=5&toAge=90&location=&withinRange=&sortBy=
-Authorization: Bearer <token>
+Authorization: Bearer <token>   # optional — sent only when ATHLINKS_TOKEN is set
 Origin: https://www.athlinks.com
 ```
 - `searchTerm`: free-text name search (prefix match); `limit`/`skip` for pagination
@@ -428,7 +428,7 @@ Response → fields per athlete:
 **2. Athlete race history:**
 ```
 GET https://alaska.athlinks.com/athletes/api/{racerId}/Races?start={offset}&limit={n}
-Authorization: Bearer <token>
+Authorization: Bearer <token>   # optional — sent only when ATHLINKS_TOKEN is set
 Origin: https://www.athlinks.com
 ```
 - `racerId`: from athlete search above

@@ -11,18 +11,14 @@ import (
 	"github.com/jiahongc/running-race-results/internal/domain"
 )
 
-// athReq issues an authenticated GET with the headers the Athlinks API requires.
+// athReq issues a GET with the headers the Athlinks API expects. Auth is optional
+// (see setAuth): the athlete endpoints are public, so no token is required.
 func (c *Client) athReq(ctx context.Context, rawURL string) (*http.Response, error) {
-	if c.Token == "" {
-		return nil, fmt.Errorf("athlinks: ATHLINKS_TOKEN not set")
-	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", c.Token)
-	req.Header.Set("Origin", "https://www.athlinks.com")
-	req.Header.Set("Referer", "https://www.athlinks.com/")
+	c.setAuth(req)
 	return c.HTTP.Do(req)
 }
 
@@ -35,6 +31,9 @@ func (c *Client) FindAthletes(ctx context.Context, name string) ([]domain.Athlet
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if err := c.authStatusErr(resp.StatusCode); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("athlinks: athlete search status %d", resp.StatusCode)
 	}
 	var body struct {
@@ -75,6 +74,9 @@ func (c *Client) AthleteHistory(ctx context.Context, racerID string) ([]domain.R
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if err := c.authStatusErr(resp.StatusCode); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("athlinks: athlete races status %d", resp.StatusCode)
 	}
 	var body struct {

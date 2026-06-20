@@ -28,7 +28,7 @@ There is no single API for race results — each timing platform is different. T
 |----------|----------|--------|
 | **NYRR** | New York Road Runners events | ✅ live |
 | **Mika Timing** | Berlin + World Marathon Majors (Boston, Chicago, London, Tokyo, …) | ✅ live |
-| **Athlinks** | Aggregator (many events worldwide) | ✅ live — needs `ATHLINKS_TOKEN` |
+| **Athlinks** | Aggregator (many events worldwide) | ✅ live — no token needed (`ATHLINKS_TOKEN` optional) |
 | **RaceResult** | Events on `my.raceresult.com` | ✅ live |
 
 ## How it works
@@ -123,10 +123,10 @@ Secrets are read from the environment (never hardcoded). Put them in a local `.e
 
 | Variable | Used by | Notes |
 |----------|---------|-------|
-| `ATHLINKS_TOKEN` | Athlinks | A `Bearer …` token from the Athlinks frontend. Short-lived (~2h). |
+| `ATHLINKS_TOKEN` | Athlinks | **Optional.** Athlinks' athlete, search, and detail endpoints are public — `lookup` and `athlete` work with no token. Set it only for `athlete --me` (your racer id is read from the token) or as a fallback if an endpoint returns 401/403. A `Bearer …` token from the Athlinks frontend; short-lived (~2h). |
 
 ```bash
-# .env
+# .env — optional; only needed for `athlete --me` or auth-gated endpoints
 ATHLINKS_TOKEN="Bearer eyJ…"
 ```
 
